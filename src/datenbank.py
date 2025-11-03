@@ -1,6 +1,6 @@
 import sqlite3
 
-connection = sqlite3.connect("../.venv/fahrerinnnen_test.db")
+connection = sqlite3.connect("../data/fahrerinnnen_test.db")
 cursor = connection.cursor()
 
 
