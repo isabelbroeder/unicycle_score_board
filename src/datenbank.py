@@ -4,33 +4,36 @@ import pandas as pd
 
 from funktionen import alter_berechnen
 
-WETTKAMPFTAG = datetime.datetime(2025, 5, 1, 0, 0)
+COMPETITION_DAY = datetime.datetime(2025, 5, 1, 0, 0)
 
-# Anmelde-Datei einlesen
-anmeldung = pd.read_excel("../data/Anmeldung_Landesmeisterschaft_2025.xlsx", sheet_name=1, skiprows=4,)
-anmeldung.columns = ['Name', 'Geburtsdatum', 'Alter', 'Geschlecht', 'Fährt_EK', 'Name_EK', 'Ak_EK', 'Fährt_PK',
+"""read in the sign-up file"""
+sign_up = pd.read_excel("../data/Anmeldung_Landesmeisterschaft_2025.xlsx", sheet_name=1, skiprows=4, )
+sign_up.columns = ['Name', 'Geburtsdatum', 'Alter', 'Geschlecht', 'Fährt_EK', 'Name_EK', 'Ak_EK', 'Fährt_PK',
                      'Name_PK', 'Ak_PK', 'Fährt_KG', 'Name_KG', 'Ak_KG', 'Fährt_GG', 'Name_GG', 'Ak_GG', 'Startgeld']
-anmeldung = anmeldung[anmeldung['Name'].notna()]  # nur die Zeilen, die einen Namen enthalten speichern
-anmeldung = anmeldung.drop(columns='Startgeld')
+sign_up = sign_up[sign_up['Name'].notna()]  # nur die Zeilen, die einen Namen enthalten speichern
+sign_up = sign_up.drop(columns='Startgeld')
 
 #print(anmeldung.dtypes)
-anmeldung = anmeldung.convert_dtypes()
+sign_up = sign_up.convert_dtypes()
 
 
-# Verein hinzufügen
-anzahl_fahrerinnen = anmeldung['Name'].size
-anmeldung.insert(4, 'Verein', ['BW96 Schenefeld'] * anzahl_fahrerinnen)
-print('anmeldung.columns',anmeldung.columns)
+"""add clubs to the database"""
+connection = sqlite3.connect("../data/fahrerinnen.db")
+total_participants = sign_up['Name'].size
+sign_up.insert(4, 'Verein', ['BW96 Schenefeld'] * total_participants)
+print('anmeldung.columns', sign_up.columns)
 
 
-# Datenbank verbinden
+"""connect the database"""
 connection = sqlite3.connect("../data/fahrerinnen.db")
 cursor = connection.cursor()
 
-df_fahrerinnen = anmeldung[['Name', 'Geburtsdatum', 'Alter', 'Geschlecht', 'Verein']]
+df_participants = sign_up[['Name', 'Geburtsdatum', 'Alter', 'Geschlecht', 'Verein']]
 #df_fahrerinnen.to_sql('fahrerinnen', connection, if_exists = 'append')
 
-sql_erstellen = """
+cursor.execute("DROP TABLE IF EXISTS fahrerinnen")
+
+sql_create = """
 CREATE TABLE fahrerinnen (
 Personen_Nummer INTEGER PRIMARY KEY,
 Name VARCHAR(50),
@@ -39,15 +42,15 @@ Geburtsdatum DATE,
 Alter_Wettkampf INTEGER,
 Verein VARCHAR(50));"""
 
-cursor.execute(sql_erstellen)
+cursor.execute(sql_create)
 
 
-for zeile in range (0,anzahl_fahrerinnen):
-    alter =  alter_berechnen(df_fahrerinnen['Geburtsdatum'][zeile].to_pydatetime(), WETTKAMPFTAG) # später Alter richtig berechnen
-    sql_einfuegen = f"""INSERT INTO fahrerinnen (Personen_nummer, Name, Geschlecht, Geburtsdatum, Verein) VALUES (NULL, {df_fahrerinnen['Name']}, {df_fahrerinnen['Geschlecht']}, {df_fahrerinnen['Geburtsdatum']},  {df_fahrerinnen['Verein']});"""
-    sql_einfuegen = """INSERT INTO fahrerinnen (Personen_nummer, Name, Geschlecht, Geburtsdatum, Alter_Wettkampf, Verein) VALUES (?, ? , ? , ? , ? , ?) """
-    daten = (None, df_fahrerinnen['Name'][zeile], df_fahrerinnen['Geschlecht'][zeile], df_fahrerinnen['Geburtsdatum'][zeile].strftime('%Y-%m-%d'), alter, df_fahrerinnen['Verein'][zeile])
-    cursor.execute(sql_einfuegen, daten)
+for line in range (0, total_participants):
+    alter =  alter_berechnen(df_participants['Geburtsdatum'][line].to_pydatetime(), COMPETITION_DAY) # später Alter richtig berechnen
+    #sql_einfuegen = f"""INSERT INTO fahrerinnen (Personen_nummer, Name, Geschlecht, Geburtsdatum, Verein) VALUES (NULL, {df_fahrerinnen['Name']}, {df_fahrerinnen['Geschlecht']}, {df_fahrerinnen['Geburtsdatum']},  {df_fahrerinnen['Verein']});"""
+    sql_add = """INSERT INTO fahrerinnen (Personen_nummer, Name, Geschlecht, Geburtsdatum, Alter_Wettkampf, Verein) VALUES (?, ? , ? , ? , ? , ?) """
+    daten = (None, df_participants['Name'][line], df_participants['Geschlecht'][line], df_participants['Geburtsdatum'][line].strftime('%Y-%m-%d'), alter, df_participants['Verein'][line])
+    cursor.execute(sql_add, daten)
 
 # Änderung Speichern
 connection.commit()
