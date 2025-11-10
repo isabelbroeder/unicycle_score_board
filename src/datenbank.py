@@ -2,6 +2,8 @@ import datetime
 import sqlite3
 import pandas as pd
 
+from funktionen import alter_berechnen
+
 WETTKAMPFTAG = datetime.datetime(2025, 5, 1, 0, 0)
 
 # Anmelde-Datei einlesen
@@ -41,7 +43,7 @@ cursor.execute(sql_erstellen)
 
 
 for zeile in range (0,anzahl_fahrerinnen):
-    alter = 20 # später Alter richtig berechnen
+    alter =  alter_berechnen(df_fahrerinnen['Geburtsdatum'][zeile].to_pydatetime(), WETTKAMPFTAG) # später Alter richtig berechnen
     sql_einfuegen = f"""INSERT INTO fahrerinnen (Personen_nummer, Name, Geschlecht, Geburtsdatum, Verein) VALUES (NULL, {df_fahrerinnen['Name']}, {df_fahrerinnen['Geschlecht']}, {df_fahrerinnen['Geburtsdatum']},  {df_fahrerinnen['Verein']});"""
     sql_einfuegen = """INSERT INTO fahrerinnen (Personen_nummer, Name, Geschlecht, Geburtsdatum, Alter_Wettkampf, Verein) VALUES (?, ? , ? , ? , ? , ?) """
     daten = (None, df_fahrerinnen['Name'][zeile], df_fahrerinnen['Geschlecht'][zeile], df_fahrerinnen['Geburtsdatum'][zeile].strftime('%Y-%m-%d'), alter, df_fahrerinnen['Verein'][zeile])
