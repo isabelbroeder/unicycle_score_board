@@ -1,4 +1,5 @@
 import datetime
+import numpy as np
 import sqlite3
 import pandas as pd
 
@@ -7,11 +8,14 @@ from funktionen import alter_berechnen
 WETTKAMPFTAG = datetime.datetime(2025, 5, 1, 0, 0)
 
 # Anmelde-Datei einlesen
-anmeldung = pd.read_excel("../data/Anmeldung_Landesmeisterschaft_2025.xlsx", sheet_name=1, skiprows=4,)
+anmeldung = pd.read_excel("../data/Anmeldung_Landesmeisterschaft_2025.xlsx", sheet_name=1, skiprows=4)
 anmeldung.columns = ['Name', 'Geburtsdatum', 'Alter', 'Geschlecht', 'Fährt_EK', 'Name_EK', 'Ak_EK', 'Fährt_PK',
                      'Name_PK', 'Ak_PK', 'Fährt_KG', 'Name_KG', 'Ak_KG', 'Fährt_GG', 'Name_GG', 'Ak_GG', 'Startgeld']
 anmeldung = anmeldung[anmeldung['Name'].notna()]  # nur die Zeilen, die einen Namen enthalten speichern
 anmeldung = anmeldung.drop(columns='Startgeld')
+#print(anmeldung)
+#anmeldung = anmeldung.where(anmeldung.notna(), np.nan)
+#print(anmeldung)
 
 #print(anmeldung.dtypes)
 anmeldung = anmeldung.convert_dtypes()
@@ -39,19 +43,19 @@ Geburtsdatum DATE,
 Alter_Wettkampf INTEGER,
 Verein VARCHAR(50));"""
 
-cursor.execute(sql_erstellen)
+#cursor.execute(sql_erstellen)
 
 
 for zeile in range (0,anzahl_fahrerinnen):
     alter =  alter_berechnen(df_fahrerinnen['Geburtsdatum'][zeile].to_pydatetime(), WETTKAMPFTAG) # später Alter richtig berechnen
-    sql_einfuegen = f"""INSERT INTO fahrerinnen (Personen_nummer, Name, Geschlecht, Geburtsdatum, Verein) VALUES (NULL, {df_fahrerinnen['Name']}, {df_fahrerinnen['Geschlecht']}, {df_fahrerinnen['Geburtsdatum']},  {df_fahrerinnen['Verein']});"""
+    #sql_einfuegen = f"""INSERT INTO fahrerinnen (Personen_nummer, Name, Geschlecht, Geburtsdatum, Verein) VALUES (NULL, {df_fahrerinnen['Name']}, {df_fahrerinnen['Geschlecht']}, {df_fahrerinnen['Geburtsdatum']},  {df_fahrerinnen['Verein']});"""
     sql_einfuegen = """INSERT INTO fahrerinnen (Personen_nummer, Name, Geschlecht, Geburtsdatum, Alter_Wettkampf, Verein) VALUES (?, ? , ? , ? , ? , ?) """
     daten = (None, df_fahrerinnen['Name'][zeile], df_fahrerinnen['Geschlecht'][zeile], df_fahrerinnen['Geburtsdatum'][zeile].strftime('%Y-%m-%d'), alter, df_fahrerinnen['Verein'][zeile])
-    cursor.execute(sql_einfuegen, daten)
+    #cursor.execute(sql_einfuegen, daten)
+
 
 # Änderung Speichern
 connection.commit()
-
 
 
 # cursor.execute("SELECT Name FROM fahrerinnen")
@@ -59,6 +63,33 @@ connection.commit()
 # for r in result:
 #     print((r[0]))
 
+
+
+connection_kuer = sqlite3.connect("../data/kuer.db")
+cursor_kuer = connection_kuer.cursor()
+
+sql_erstellen = """
+CREATE TABLE kuer (
+Kuer_Nummer INTEGER PRIMARY KEY,
+Kuername VARCHAR(50),
+Kategorie VARCHAR(20),
+Altersklasse VARCHAR(3));"""
+
+cursor_kuer.execute(sql_erstellen)
+
+ek_kuernamen = anmeldung['Name_EK'].dropna().unique()
+ek_kuernamen = [s for s in ek_kuernamen if s.strip() != ''] # entfernt Strings, die nur aus Leerzeichen bestehen
+print(ek_kuernamen)
+
+
+for ek_name in ek_kuernamen:
+    sql_einfuegen = """INSERT INTO kuer (Kuer_Nummer, Kuername, Kategorie) VALUES (?, ?, ?) """
+    daten = (None, ek_name, 'EK')
+    cursor_kuer.execute(sql_einfuegen, daten)
+
+connection_kuer.commit()
+
 connection.close()
+connection_kuer.close()
 
 

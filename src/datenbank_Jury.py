@@ -7,7 +7,7 @@ import sqlite3
 
 ALTERSKLASSEN = ['U15', '15+']
 KATEGORIEN = ['EK', 'PK', 'KG', 'GG']
-KUERZEL = ['T1', 'T2', 'T3', 'T4', 'P1', 'P2', 'P3', 'P4']
+KUERZEL = ['T1', 'T2', 'T3', 'T4', 'P1', 'P2', 'P3', 'P4', 'D1', 'D2']
 
 
 connection = sqlite3.connect("../data/Jury.db")
