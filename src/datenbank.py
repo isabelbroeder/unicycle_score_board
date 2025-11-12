@@ -1,5 +1,4 @@
 import datetime
-import numpy as np
 import sqlite3
 import pandas as pd
 
@@ -65,14 +64,13 @@ Geburtsdatum DATE,
 Alter_Wettkampf INTEGER,
 Verein VARCHAR(50));"""
 
-#cursor.execute(sql_erstellen)
+# cursor.execute(sql_erstellen)
 
 
 for zeile in range(0, anzahl_fahrerinnen):
     alter = alter_berechnen(
         df_fahrerinnen["Geburtsdatum"][zeile].to_pydatetime(), WETTKAMPFTAG
-    )  # später Alter richtig berechnen
-    # sql_einfuegen = f"""INSERT INTO fahrerinnen (Personen_nummer, Name, Geschlecht, Geburtsdatum, Verein) VALUES (NULL, {df_fahrerinnen['Name']}, {df_fahrerinnen['Geschlecht']}, {df_fahrerinnen['Geburtsdatum']},  {df_fahrerinnen['Verein']});"""
+    )
     sql_einfuegen = """INSERT INTO fahrerinnen (Personen_nummer, Name, Geschlecht, Geburtsdatum, Alter_Wettkampf, Verein) VALUES (?, ? , ? , ? , ? , ?) """
     daten = (
         None,
