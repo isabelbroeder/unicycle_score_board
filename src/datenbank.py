@@ -58,7 +58,7 @@ df_fahrerinnen = anmeldung[["Name", "Geburtsdatum", "Alter", "Geschlecht", "Vere
 
 cursor.execute("DROP TABLE IF EXISTS fahrerinnen")
 
-sql_create = """
+sql_erstellen = """
 CREATE TABLE fahrerinnen (
 Personen_Nummer INTEGER PRIMARY KEY,
 Name VARCHAR(50),
@@ -67,7 +67,7 @@ Geburtsdatum DATE,
 Alter_Wettkampf INTEGER,
 Verein VARCHAR(50));"""
 
-# cursor.execute(sql_erstellen)
+cursor.execute(sql_erstellen)
 
 
 for zeile in range(0, anzahl_fahrerinnen):
@@ -83,7 +83,7 @@ for zeile in range(0, anzahl_fahrerinnen):
         alter,
         df_fahrerinnen["Verein"][zeile],
     )
-    # cursor.execute(sql_einfuegen, daten)
+    cursor.execute(sql_einfuegen, daten)
 
 
 # Änderung Speichern
