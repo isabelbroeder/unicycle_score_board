@@ -1,13 +1,13 @@
 import sqlite3
 
-#ANZAHL_T = 4
-#ANZAHL_P = 4
-#ANZAHL_D_EK_PK = 2
-#ANZAHL_D_KG_GG = 4
+# ANZAHL_T = 4
+# ANZAHL_P = 4
+# ANZAHL_D_EK_PK = 2
+# ANZAHL_D_KG_GG = 4
 
-ALTERSKLASSEN = ['U15', '15+']
-KATEGORIEN = ['EK', 'PK', 'KG', 'GG']
-KUERZEL = ['T1', 'T2', 'T3', 'T4', 'P1', 'P2', 'P3', 'P4']
+ALTERSKLASSEN = ["U15", "15+"]
+KATEGORIEN = ["EK", "PK", "KG", "GG"]
+KUERZEL = ["T1", "T2", "T3", "T4", "P1", "P2", "P3", "P4", "D1", "D2"]
 
 
 connection = sqlite3.connect("../data/Jury.db")
