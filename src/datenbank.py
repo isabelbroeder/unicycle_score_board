@@ -4,6 +4,7 @@ import pandas as pd
 
 from funktionen import alter_berechnen
 
+COMPETITION_DAY = datetime.datetime(2025, 5, 1, 0, 0)
 WETTKAMPFTAG = datetime.datetime(2025, 5, 1, 0, 0)
 KATEGORIEN = ["EK", "PK", "KG", "GG"]
 
@@ -55,7 +56,9 @@ cursor = connection.cursor()
 df_fahrerinnen = anmeldung[["Name", "Geburtsdatum", "Alter", "Geschlecht", "Verein"]]
 # df_fahrerinnen.to_sql('fahrerinnen', connection, if_exists = 'append')
 
-sql_erstellen = """
+cursor.execute("DROP TABLE IF EXISTS fahrerinnen")
+
+sql_create = """
 CREATE TABLE fahrerinnen (
 Personen_Nummer INTEGER PRIMARY KEY,
 Name VARCHAR(50),

@@ -13,6 +13,7 @@ KUERZEL = ["T1", "T2", "T3", "T4", "P1", "P2", "P3", "P4", "D1", "D2"]
 connection = sqlite3.connect("../data/Jury.db")
 cursor = connection.cursor()
 
+cursor.execute("DROP TABLE IF EXISTS Jury")
 
 sql_erstellen = """
 CREATE TABLE jury (
