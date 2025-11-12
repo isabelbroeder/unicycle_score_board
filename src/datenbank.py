@@ -19,16 +19,16 @@ anmeldung.columns = [
     "Geschlecht",
     "Fährt_EK",
     "Name_EK",
-    "Ak_EK",
+    "AK_EK",
     "Fährt_PK",
     "Name_PK",
-    "Ak_PK",
+    "AK_PK",
     "Fährt_KG",
     "Name_KG",
-    "Ak_KG",
+    "AK_KG",
     "Fährt_GG",
     "Name_GG",
-    "Ak_GG",
+    "AK_GG",
     "Startgeld",
 ]
 anmeldung = anmeldung[
@@ -65,7 +65,7 @@ Geburtsdatum DATE,
 Alter_Wettkampf INTEGER,
 Verein VARCHAR(50));"""
 
-# cursor.execute(sql_erstellen)
+#cursor.execute(sql_erstellen)
 
 
 for zeile in range(0, anzahl_fahrerinnen):
@@ -108,30 +108,29 @@ Kuername VARCHAR(50),
 Kategorie VARCHAR(20),
 Altersklasse VARCHAR(3));"""
 
-cursor_kuer.execute(sql_erstellen)
+# cursor_kuer.execute(sql_erstellen)
 
 
-def kueren_in_db(
-    kategorie: str, connection: sqlite3.Connection, cursor: sqlite3.Cursor
-):
-    # global sql_einfuegen, daten
-    spalten_name = "Name_" + str(kategorie)
-    kuernamen = anmeldung[spalten_name].dropna().unique()
+def kueren_in_db(df_anmeldung, kategorie: str, connection: sqlite3.Connection, cursor: sqlite3.Cursor):
+    spalte_name = "Name_" + str(kategorie)
+    spalte_ak = "AK_" + str(kategorie)
+    kuernamen = df_anmeldung[spalte_name].dropna().unique()
     kuernamen = [
         s for s in kuernamen if s.strip() != ""
     ]  # entfernt Strings, die nur aus Leerzeichen bestehen
-    print(kuernamen)
     for kuername in kuernamen:
+        ak_kuer = ((df_anmeldung[spalte_ak].where(kuername==df_anmeldung[spalte_name])).dropna()).iloc[0]
+        print(ak_kuer)
         sql_einfuegen = (
-            """INSERT INTO kuer (Kuer_Nummer, Kuername, Kategorie) VALUES (?, ?, ?) """
+            """INSERT INTO kuer (Kuer_Nummer, Kuername, Kategorie, Altersklasse) VALUES (?, ?, ?, ?) """
         )
-        daten = (None, kuername, kategorie)
+        daten = (None, kuername, kategorie, ak_kuer)
         cursor.execute(sql_einfuegen, daten)
     connection.commit()
 
 
 for kategorie in KATEGORIEN:
-    kueren_in_db(kategorie, connection_kuer, cursor_kuer)
+    kueren_in_db(anmeldung, kategorie, connection_kuer, cursor_kuer)
 
 connection.close()
 connection_kuer.close()
