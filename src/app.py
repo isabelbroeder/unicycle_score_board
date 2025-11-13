@@ -2,10 +2,12 @@
 
 
 # %% import packages
-from dash import Dash, dash_table, html, Input, Output, State
+from dash import Dash, dash_table, html, Input, Output, State, dcc
+import dash
 import dash_daq as daq
 import sqlite3
 import pandas as pd
+import dash_bootstrap_components as dbc
 
 class DataLoader:
     """Handles reading and writing data from SQLite databases."""
@@ -43,9 +45,13 @@ class DataLoader:
             print(f"❌ Fehler beim Abrufen der Kategorien: {e}")
             return []
 
+
+
+
 class Dashboard:
     def __init__(self):
-        self.app = Dash(__name__, title="Fahrerinnen & Jury Dashboard", suppress_callback_exceptions=True)
+        self.app = Dash(__name__, title="Fahrerinnen & Jury Dashboard", suppress_callback_exceptions=True,
+                        external_stylesheets=[dbc.themes.DARKLY])
 
         # --- Themes ---
         self.LIGHT_THEME = {
@@ -100,7 +106,7 @@ class Dashboard:
                         "gap": "10px",
                     },
                 ),
-                # View switch button
+                # jury switch button
                 html.Button(
                     "👥 Wechsel zu Jury Ansicht",
                     id="view-switch-btn",
@@ -118,6 +124,37 @@ class Dashboard:
                         "fontSize": "14px",
                     },
                 ),
+
+                # password needed to access jury mode
+                dcc.Store(id="jury-access", data=False),
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader("🔒 Jury-Zugang"),
+                        dbc.ModalBody(
+                            [
+                                html.Div("Bitte Passwort eingeben:", style={"marginBottom": "10px"}),
+                                dcc.Input(
+                                    id="password-input",
+                                    type="password",
+                                    placeholder="Passwort",
+                                    style={"width": "100%", "padding": "8px"},
+                                ),
+                                html.Div(id="password-error", style={"color": "red", "marginTop": "10px"}),
+                            ]
+                        ),
+                        dbc.ModalFooter(
+                            [
+                                dbc.Button("Abbrechen", id="cancel-password", color="secondary", n_clicks=0),
+                                dbc.Button("Bestätigen", id="submit-password", color="primary", n_clicks=0),
+                            ]
+                        ),
+                    ],
+                    id="password-modal",
+                    is_open=False,
+                    backdrop="static",
+                ),
+
+
                 html.H1(
                     id="page-title",
                     children="🏁 Teilnehmer Übersicht",
@@ -187,21 +224,64 @@ class Dashboard:
             ],
         )
 
-    # ----------------- Callbacks -----------------
     def _register_callbacks(self):
+
+        # --- Password modal open/close ---
         @self.app.callback(
-            Output("page-container", "style"),
-            Output("table-container", "children"),
-            Output("page-title", "children"),
-            Output("view-switch-btn", "children"),
-            Output("theme-icon", "children"),
-            Input("theme-toggle", "value"),
+            Output("password-modal", "is_open"),
+            Output("password-error", "children"),
+            Output("jury-access", "data"),
             Input("view-switch-btn", "n_clicks"),
+            Input("submit-password", "n_clicks"),
+            Input("cancel-password", "n_clicks"),
+            State("password-modal", "is_open"),
+            State("password-input", "value"),
+            State("jury-access", "data"),
+            prevent_initial_call=True,
         )
-        def update_dashboard(is_dark, n_clicks):
+        def toggle_password_modal(open_clicks, submit_clicks, cancel_clicks, is_open, password, has_access):
+            ctx = dash.callback_context
+            if not ctx.triggered:
+                raise dash.exceptions.PreventUpdate
+            button_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+            correct_password = "mysecret"  # TODO: change to your real password
+
+            if button_id == "view-switch-btn":
+                if has_access:
+                    # if jury mode activ -> switch back
+                    return False, "", False
+                else:
+                    # if jury mode is about to be activated -> ask for password
+                    return True, "", False
+
+            elif button_id == "submit-password":
+                if password == correct_password:
+                    # grant access
+                    return False, "", True
+                else:
+                    return True, "❌ Falsches Passwort!", False
+            elif button_id == "cancel-password":
+                return False, "", has_access
+            else:
+                raise dash.exceptions.PreventUpdate
+
+
+
+        @self.app.callback(
+        Output("page-container", "style"),
+        Output("table-container", "children"),
+        Output("page-title", "children"),
+        Output("view-switch-btn", "children"),
+        Output("theme-icon", "children"),
+        Input("theme-toggle", "value"),
+        Input("jury-access", "data"),
+        prevent_initial_call=False,
+        )
+        def update_dashboard(is_dark, jury_access):
             theme = self.DARK_THEME if is_dark else self.LIGHT_THEME
             icon = "🌙" if is_dark else "🌞"
-            jury_mode = n_clicks % 2 == 1
+            jury_mode = jury_access
 
             page_style = {
                 "backgroundColor": theme["backgroundColor"],
