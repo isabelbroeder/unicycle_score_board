@@ -3,3 +3,4 @@ openpyxl
 dash
 dash_daq
 plotly
+numpy
