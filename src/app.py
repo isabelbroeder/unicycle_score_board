@@ -8,6 +8,10 @@ import dash_daq as daq
 import sqlite3
 import pandas as pd
 import dash_bootstrap_components as dbc
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 class DataLoader:
     """Handles reading and writing data from SQLite databases."""
@@ -245,7 +249,7 @@ class Dashboard:
                 raise dash.exceptions.PreventUpdate
             button_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-            correct_password = "mysecret"  # TODO: change to your real password
+            correct_password = os.getenv("JURY_PASSWORD")
 
             if button_id == "view-switch-btn":
                 if has_access:
