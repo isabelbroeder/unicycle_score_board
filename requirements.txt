@@ -5,3 +5,4 @@ dash_daq
 plotly
 dash_bootstrap_components
 python-dotenv
+numpy

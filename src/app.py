@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
+import numpy as np
 
 class DataLoader:
     """Handles reading and writing data from SQLite databases."""
@@ -34,20 +35,9 @@ class DataLoader:
             conn = sqlite3.connect(self.db_path)
             df.to_sql(self.table_name, conn, if_exists='replace', index=False)
             conn.close()
-            print("✅ Jury-Datenbank aktualisiert.")
+            print(f"✅ {self.table_name} aktualisiert.")
         except Exception as e:
-            print(f"❌ Fehler beim Schreiben der Jury-Datenbank: {e}")
-
-    def get_kategorien_list(self) -> list:
-        """Return list of unique Kategorien from Jury database."""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            df = pd.read_sql_query(f"SELECT DISTINCT Kategorie FROM {self.table_name}", conn)
-            conn.close()
-            return df['Kategorie'].tolist()
-        except Exception as e:
-            print(f"❌ Fehler beim Abrufen der Kategorien: {e}")
-            return []
+            print(f"❌ Fehler beim Schreiben in {self.table_name}: {e}")
 
 
 
@@ -179,26 +169,63 @@ class Dashboard:
         dropdown = {}
 
         if jury_mode:
-            # Kürzel aus Jury-Datenbank abrufen -> jetzt Kategorien
-            kategorien_list = DataLoader("../data/Jury.db", "jury").get_kategorien_list()
-            # Eine Spalte pro Kategorie für Teilnahme
-            for k in kategorien_list:
-                if k not in df.columns:
-                    df[k] = False
-                dropdown[k] = {"options": [{"label": "✅", "value": True}, {"label": "⬜", "value": False}]}
+            df_kuer = DataLoader("../data/kuer.db", "kuer").get_data()
+            df_punkte = DataLoader("../data/punkte.db", "punkte").get_data()
 
-            if "Punkte" not in df.columns:
-                df["Punkte"] = ""
+            # Sicherstellen, dass alle Kürkombinationen einmalig sind
+            df_kuer = df_kuer.drop_duplicates(subset=["Kuername", "Kategorie", "Altersklasse"])
+            if df_punkte.empty:
+                df_punkte = pd.DataFrame(columns=["Kuername", "Kategorie", "Altersklasse"])
+            df_punkte = df_punkte.drop_duplicates(subset=["Kuername", "Kategorie", "Altersklasse"])
+
+            # Merge ohne Duplikate, Kürstruktur bleibt gleich
+            df = df_kuer.merge(df_punkte, on=["Kuername", "Kategorie", "Altersklasse"], how="left")
+
+            all_judges = [f"T{i}" for i in range(1,5)] + [f"P{i}" for i in range(1,5)] + [f"D{i}" for i in range(1,5)]
+            for j in all_judges:
+                if j not in df.columns:
+                    df[j] = np.nan
+
+            # Setze "–" für nicht bewertende Judges und sperre die Spalte
+            def set_uneditable_judges(row):
+                cat = row['Kategorie']
+                if cat in ['EK','PK']:
+                    row['D3'] = row['D4'] = '–'
+                return row
+            df = df.apply(set_uneditable_judges, axis=1)
+
+            # Gesamtpunkte live berechnen ("–" zählt als 0)
+            def compute_total(row):
+                total = 0
+                for col in all_judges:
+                    val = row[col]
+                    if val == '–' or pd.isna(val):
+                        total += 0
+                    else:
+                        try:
+                            total += float(val)
+                        except:
+                            total += 0
+                return total
+            df['Gesamtpunkte'] = df.apply(compute_total, axis=1)
 
         # Spalten definieren
         columns = []
         for col in df.columns:
-            if jury_mode and col in kategorien_list:
-                columns.append({"name": col, "id": col, "type": "any", "editable": editable})
-            elif col == "Punkte":
-                columns.append({"name": col, "id": col, "type": "numeric", "editable": editable})
+            if jury_mode and col in all_judges:
+                if col.startswith('D') and df['Kategorie'].iloc[0] in ['EK', 'PK'] and col in ['D3', 'D4']:
+                    editable_flag = False  # EK/PK, D3/D4 immer nicht editierbar
+                else:
+                    editable_flag = True if df[col].iloc[0] != '–' else False
+                columns.append({"name": col, "id": col, "editable": editable_flag})
+            elif col == 'Gesamtpunkte':
+                columns.append({"name": col, "id": col, "type": 'numeric', "editable": False})
             else:
-                columns.append({"name": col, "id": col, "editable": editable})
+                columns.append({"name": col, "id": col, "editable": False})
+
+        # Gesamtpunkte ans Ende verschieben, nur wenn vorhanden
+        if 'Gesamtpunkte' in df.columns:
+            df = df[[c for c in df.columns if c != 'Gesamtpunkte'] + ['Gesamtpunkte']]
 
         return dash_table.DataTable(
             id="data-table",
@@ -228,6 +255,7 @@ class Dashboard:
             ],
         )
 
+    # ----------------- Callbacks -----------------
     def _register_callbacks(self):
 
         # --- Password modal open/close ---
@@ -297,29 +325,47 @@ class Dashboard:
             }
 
             if jury_mode:
-                df = DataLoader("../data/fahrerinnen.db", "fahrerinnen").get_data()
-                title = "⚖️ Jury Übersicht"
-                button_text = "👥 Wechsel zu Teilnehmer Ansicht"
+                df = DataLoader('../data/kuer.db', 'kuer').get_data()
+                title = '⚖️ Jury Übersicht'
+                button_text = '👥 Wechsel zu Teilnehmer Ansicht'
                 table = self._datatable(df, theme, editable=True, jury_mode=True)
             else:
-                df = DataLoader("../data/fahrerinnen.db", "fahrerinnen").get_data()
-                title = "🏁 Teilnehmer Übersicht"
-                button_text = "⚖️ Wechsel zu Jury Ansicht"
+                df = DataLoader('../data/fahrerinnen.db', 'fahrerinnen').get_data()
+                title = '🏁 Teilnehmer Übersicht'
+                button_text = '⚖️ Wechsel zu Jury Ansicht'
                 table = self._datatable(df, theme, editable=False, jury_mode=False)
 
             return page_style, table, title, button_text, icon
 
         @self.app.callback(
-            Output("data-table", "data", allow_duplicate=True),
-            Input("data-table", "active_cell"),
-            State("data-table", "data"),
-            prevent_initial_call=True,
+            Output('data-table', 'data', allow_duplicate=True),
+            Input('data-table', 'data'),
+            State('data-table', 'data'),
+            prevent_initial_call=True
         )
-        def save_jury_changes(active_cell, rows):
-            if active_cell and rows:
-                loader = DataLoader("../data/Jury.db", "jury")
-                loader.update_data(pd.DataFrame(rows))
-            return rows
+        def update_points(rows, current_state):
+            if rows:
+                df = pd.DataFrame(rows)
+                all_judges = [f"T{i}" for i in range(1,5)] + [f"P{i}" for i in range(1,5)] + [f"D{i}" for i in range(1,5)]
+
+                # Gesamtpunkte live berechnen
+                def compute_total(row):
+                    total = 0
+                    for col in all_judges:
+                        val = row[col]
+                        if val == '–' or pd.isna(val):
+                            total += 0
+                        else:
+                            try:
+                                total += float(val)
+                            except:
+                                total += 0
+                    return total
+                df['Gesamtpunkte'] = df.apply(compute_total, axis=1)
+
+                # Punkte speichern (keine Duplikate)
+                DataLoader('../data/punkte.db', 'punkte').update_data(df)
+            return df.to_dict('records')
 
     def run(self):
         self.app.run(debug=True)

@@ -4,7 +4,6 @@ import pandas as pd
 
 from funktionen import alter_berechnen
 
-COMPETITION_DAY = datetime.datetime(2025, 5, 1, 0, 0)
 WETTKAMPFTAG = datetime.datetime(2025, 5, 1, 0, 0)
 KATEGORIEN = ["EK", "PK", "KG", "GG"]
 
