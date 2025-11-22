@@ -10,6 +10,8 @@ import pandas as pd
 import dash_bootstrap_components as dbc
 from dotenv import load_dotenv
 import os
+import json
+import bcrypt
 
 load_dotenv()
 import numpy as np
@@ -277,7 +279,13 @@ class Dashboard:
                 raise dash.exceptions.PreventUpdate
             button_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-            correct_password = os.getenv("JURY_PASSWORD")
+            with open("config.json", "r") as f:
+                CONFIG = json.load(f)
+
+            STORED_HASH: object = CONFIG["jury_password_hash"].encode()
+            correct_password_hash = STORED_HASH
+
+            # correct_password = os.getenv("JURY_PASSWORD")
 
             if button_id == "view-switch-btn":
                 if has_access:
@@ -288,11 +296,11 @@ class Dashboard:
                     return True, "", False
 
             elif button_id == "submit-password":
-                if password == correct_password:
-                    # grant access
-                    return False, "", True
+                if password and bcrypt.checkpw(password.encode(), correct_password_hash):
+                    return False, "", True  # correct
                 else:
                     return True, "❌ Falsches Passwort!", False
+
             elif button_id == "cancel-password":
                 return False, "", has_access
             else:
