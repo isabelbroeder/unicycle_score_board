@@ -1,23 +1,23 @@
 """creates dashboard from data in database"""
 
-
 # %% import packages
 from dash import Dash, dash_table, html, Input, Output, State, dcc
 import dash
 import dash_daq as daq
 import sqlite3
 import pandas as pd
+import numpy as np
 import dash_bootstrap_components as dbc
 from dotenv import load_dotenv
-import os
 import json
 import bcrypt
 
 load_dotenv()
-import numpy as np
+
 
 class DataLoader:
     """Handles reading and writing data from SQLite databases."""
+
     def __init__(self, db_path, table_name):
         self.db_path = db_path
         self.table_name = table_name
@@ -35,19 +35,21 @@ class DataLoader:
     def update_data(self, df: pd.DataFrame):
         try:
             conn = sqlite3.connect(self.db_path)
-            df.to_sql(self.table_name, conn, if_exists='replace', index=False)
+            df.to_sql(self.table_name, conn, if_exists="replace", index=False)
             conn.close()
             print(f"✅ {self.table_name} aktualisiert.")
         except Exception as e:
             print(f"❌ Fehler beim Schreiben in {self.table_name}: {e}")
 
 
-
-
 class Dashboard:
     def __init__(self):
-        self.app = Dash(__name__, title="Fahrerinnen & Jury Dashboard", suppress_callback_exceptions=True,
-                        external_stylesheets=[dbc.themes.DARKLY])
+        self.app = Dash(
+            __name__,
+            title="Fahrerinnen & Jury Dashboard",
+            suppress_callback_exceptions=True,
+            external_stylesheets=[dbc.themes.DARKLY],
+        )
 
         # --- Themes ---
         self.LIGHT_THEME = {
@@ -75,8 +77,8 @@ class Dashboard:
 
     # ----------------- UI -----------------
     def _build_layout(self):
-        df = DataLoader("../data/fahrerinnen.db", "fahrerinnen").get_data()
-        theme = self.DARK_THEME
+        # df = DataLoader("../data/fahrerinnen.db", "fahrerinnen").get_data()
+        # theme = self.DARK_THEME
 
         return html.Div(
             id="page-container",
@@ -90,8 +92,14 @@ class Dashboard:
                 # Light/Dark toggle
                 html.Div(
                     [
-                        html.Span("🌞", id="theme-icon", style={"fontSize": "22px", "marginRight": "8px"}),
-                        daq.ToggleSwitch(id="theme-toggle", value=True, color="#333333", size=40),
+                        html.Span(
+                            "🌞",
+                            id="theme-icon",
+                            style={"fontSize": "22px", "marginRight": "8px"},
+                        ),
+                        daq.ToggleSwitch(
+                            id="theme-toggle", value=True, color="#333333", size=40
+                        ),
                     ],
                     style={
                         "position": "absolute",
@@ -120,7 +128,6 @@ class Dashboard:
                         "fontSize": "14px",
                     },
                 ),
-
                 # password needed to access jury mode
                 dcc.Store(id="jury-access", data=False),
                 dbc.Modal(
@@ -128,20 +135,36 @@ class Dashboard:
                         dbc.ModalHeader("🔒 Jury-Zugang"),
                         dbc.ModalBody(
                             [
-                                html.Div("Bitte Passwort eingeben:", style={"marginBottom": "10px"}),
+                                html.Div(
+                                    "Bitte Passwort eingeben:",
+                                    style={"marginBottom": "10px"},
+                                ),
                                 dcc.Input(
                                     id="password-input",
                                     type="password",
                                     placeholder="Passwort",
                                     style={"width": "100%", "padding": "8px"},
                                 ),
-                                html.Div(id="password-error", style={"color": "red", "marginTop": "10px"}),
+                                html.Div(
+                                    id="password-error",
+                                    style={"color": "red", "marginTop": "10px"},
+                                ),
                             ]
                         ),
                         dbc.ModalFooter(
                             [
-                                dbc.Button("Abbrechen", id="cancel-password", color="secondary", n_clicks=0),
-                                dbc.Button("Bestätigen", id="submit-password", color="primary", n_clicks=0),
+                                dbc.Button(
+                                    "Abbrechen",
+                                    id="cancel-password",
+                                    color="secondary",
+                                    n_clicks=0,
+                                ),
+                                dbc.Button(
+                                    "Bestätigen",
+                                    id="submit-password",
+                                    color="primary",
+                                    n_clicks=0,
+                                ),
                             ]
                         ),
                     ],
@@ -149,8 +172,6 @@ class Dashboard:
                     is_open=False,
                     backdrop="static",
                 ),
-
-
                 html.H1(
                     id="page-title",
                     children="🏁 Teilnehmer Übersicht",
@@ -175,25 +196,38 @@ class Dashboard:
             df_punkte = DataLoader("../data/punkte.db", "punkte").get_data()
 
             # Sicherstellen, dass alle Kürkombinationen einmalig sind
-            df_kuer = df_kuer.drop_duplicates(subset=["Kuername", "Kategorie", "Altersklasse"])
+            df_kuer = df_kuer.drop_duplicates(
+                subset=["Kuername", "Kategorie", "Altersklasse"]
+            )
             if df_punkte.empty:
-                df_punkte = pd.DataFrame(columns=["Kuername", "Kategorie", "Altersklasse"])
-            df_punkte = df_punkte.drop_duplicates(subset=["Kuername", "Kategorie", "Altersklasse"])
+                df_punkte = pd.DataFrame(
+                    columns=["Kuername", "Kategorie", "Altersklasse"]
+                )
+            df_punkte = df_punkte.drop_duplicates(
+                subset=["Kuername", "Kategorie", "Altersklasse"]
+            )
 
             # Merge ohne Duplikate, Kürstruktur bleibt gleich
-            df = df_kuer.merge(df_punkte, on=["Kuername", "Kategorie", "Altersklasse"], how="left")
+            df = df_kuer.merge(
+                df_punkte, on=["Kuername", "Kategorie", "Altersklasse"], how="left"
+            )
 
-            all_judges = [f"T{i}" for i in range(1,5)] + [f"P{i}" for i in range(1,5)] + [f"D{i}" for i in range(1,5)]
+            all_judges = (
+                [f"T{i}" for i in range(1, 5)]
+                + [f"P{i}" for i in range(1, 5)]
+                + [f"D{i}" for i in range(1, 5)]
+            )
             for j in all_judges:
                 if j not in df.columns:
                     df[j] = np.nan
 
             # Setze "–" für nicht bewertende Judges und sperre die Spalte
             def set_uneditable_judges(row):
-                cat = row['Kategorie']
-                if cat in ['EK','PK']:
-                    row['D3'] = row['D4'] = '–'
+                cat = row["Kategorie"]
+                if cat in ["EK", "PK"]:
+                    row["D3"] = row["D4"] = "–"
                 return row
+
             df = df.apply(set_uneditable_judges, axis=1)
 
             # Gesamtpunkte live berechnen ("–" zählt als 0)
@@ -201,7 +235,7 @@ class Dashboard:
                 total = 0
                 for col in all_judges:
                     val = row[col]
-                    if val == '–' or pd.isna(val):
+                    if val == "–" or pd.isna(val):
                         total += 0
                     else:
                         try:
@@ -209,25 +243,32 @@ class Dashboard:
                         except:
                             total += 0
                 return total
-            df['Gesamtpunkte'] = df.apply(compute_total, axis=1)
+
+            df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
 
         # Spalten definieren
         columns = []
         for col in df.columns:
             if jury_mode and col in all_judges:
-                if col.startswith('D') and df['Kategorie'].iloc[0] in ['EK', 'PK'] and col in ['D3', 'D4']:
+                if (
+                    col.startswith("D")
+                    and df["Kategorie"].iloc[0] in ["EK", "PK"]
+                    and col in ["D3", "D4"]
+                ):
                     editable_flag = False  # EK/PK, D3/D4 immer nicht editierbar
                 else:
-                    editable_flag = True if df[col].iloc[0] != '–' else False
+                    editable_flag = True if df[col].iloc[0] != "–" else False
                 columns.append({"name": col, "id": col, "editable": editable_flag})
-            elif col == 'Gesamtpunkte':
-                columns.append({"name": col, "id": col, "type": 'numeric', "editable": False})
+            elif col == "Gesamtpunkte":
+                columns.append(
+                    {"name": col, "id": col, "type": "numeric", "editable": False}
+                )
             else:
                 columns.append({"name": col, "id": col, "editable": False})
 
         # Gesamtpunkte ans Ende verschieben, nur wenn vorhanden
-        if 'Gesamtpunkte' in df.columns:
-            df = df[[c for c in df.columns if c != 'Gesamtpunkte'] + ['Gesamtpunkte']]
+        if "Gesamtpunkte" in df.columns:
+            df = df[[c for c in df.columns if c != "Gesamtpunkte"] + ["Gesamtpunkte"]]
 
         return dash_table.DataTable(
             id="data-table",
@@ -259,7 +300,6 @@ class Dashboard:
 
     # ----------------- Callbacks -----------------
     def _register_callbacks(self):
-
         # --- Password modal open/close ---
         @self.app.callback(
             Output("password-modal", "is_open"),
@@ -273,7 +313,9 @@ class Dashboard:
             State("jury-access", "data"),
             prevent_initial_call=True,
         )
-        def toggle_password_modal(open_clicks, submit_clicks, cancel_clicks, is_open, password, has_access):
+        def toggle_password_modal(
+            open_clicks, submit_clicks, cancel_clicks, is_open, password, has_access
+        ):
             ctx = dash.callback_context
             if not ctx.triggered:
                 raise dash.exceptions.PreventUpdate
@@ -296,7 +338,9 @@ class Dashboard:
                     return True, "", False
 
             elif button_id == "submit-password":
-                if password and bcrypt.checkpw(password.encode(), correct_password_hash):
+                if password and bcrypt.checkpw(
+                    password.encode(), correct_password_hash
+                ):
                     return False, "", True  # correct
                 else:
                     return True, "❌ Falsches Passwort!", False
@@ -306,17 +350,15 @@ class Dashboard:
             else:
                 raise dash.exceptions.PreventUpdate
 
-
-
         @self.app.callback(
-        Output("page-container", "style"),
-        Output("table-container", "children"),
-        Output("page-title", "children"),
-        Output("view-switch-btn", "children"),
-        Output("theme-icon", "children"),
-        Input("theme-toggle", "value"),
-        Input("jury-access", "data"),
-        prevent_initial_call=False,
+            Output("page-container", "style"),
+            Output("table-container", "children"),
+            Output("page-title", "children"),
+            Output("view-switch-btn", "children"),
+            Output("theme-icon", "children"),
+            Input("theme-toggle", "value"),
+            Input("jury-access", "data"),
+            prevent_initial_call=False,
         )
         def update_dashboard(is_dark, jury_access):
             theme = self.DARK_THEME if is_dark else self.LIGHT_THEME
@@ -333,35 +375,39 @@ class Dashboard:
             }
 
             if jury_mode:
-                df = DataLoader('../data/kuer.db', 'kuer').get_data()
-                title = '⚖️ Jury Übersicht'
-                button_text = '👥 Wechsel zu Teilnehmer Ansicht'
+                df = DataLoader("../data/kuer.db", "kuer").get_data()
+                title = "⚖️ Jury Übersicht"
+                button_text = "👥 Wechsel zu Teilnehmer Ansicht"
                 table = self._datatable(df, theme, editable=True, jury_mode=True)
             else:
-                df = DataLoader('../data/fahrerinnen.db', 'fahrerinnen').get_data()
-                title = '🏁 Teilnehmer Übersicht'
-                button_text = '⚖️ Wechsel zu Jury Ansicht'
+                df = DataLoader("../data/fahrerinnen.db", "fahrerinnen").get_data()
+                title = "🏁 Teilnehmer Übersicht"
+                button_text = "⚖️ Wechsel zu Jury Ansicht"
                 table = self._datatable(df, theme, editable=False, jury_mode=False)
 
             return page_style, table, title, button_text, icon
 
         @self.app.callback(
-            Output('data-table', 'data', allow_duplicate=True),
-            Input('data-table', 'data'),
-            State('data-table', 'data'),
-            prevent_initial_call=True
+            Output("data-table", "data", allow_duplicate=True),
+            Input("data-table", "data"),
+            State("data-table", "data"),
+            prevent_initial_call=True,
         )
         def update_points(rows, current_state):
             if rows:
                 df = pd.DataFrame(rows)
-                all_judges = [f"T{i}" for i in range(1,5)] + [f"P{i}" for i in range(1,5)] + [f"D{i}" for i in range(1,5)]
+                all_judges = (
+                    [f"T{i}" for i in range(1, 5)]
+                    + [f"P{i}" for i in range(1, 5)]
+                    + [f"D{i}" for i in range(1, 5)]
+                )
 
                 # Gesamtpunkte live berechnen
                 def compute_total(row):
                     total = 0
                     for col in all_judges:
                         val = row[col]
-                        if val == '–' or pd.isna(val):
+                        if val == "–" or pd.isna(val):
                             total += 0
                         else:
                             try:
@@ -369,11 +415,12 @@ class Dashboard:
                             except:
                                 total += 0
                     return total
-                df['Gesamtpunkte'] = df.apply(compute_total, axis=1)
+
+                df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
 
                 # Punkte speichern (keine Duplikate)
-                DataLoader('../data/punkte.db', 'punkte').update_data(df)
-            return df.to_dict('records')
+                DataLoader("../data/punkte.db", "punkte").update_data(df)
+            return df.to_dict("records")
 
     def run(self):
         self.app.run(debug=True)
