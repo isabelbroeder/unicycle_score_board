@@ -4,7 +4,6 @@
 from dash import Dash, dash_table, html, Input, Output, State, dcc
 import dash
 import dash_daq as daq
-import sqlite3
 import pandas as pd
 import numpy as np
 import dash_bootstrap_components as dbc
@@ -12,34 +11,9 @@ from dotenv import load_dotenv
 import json
 import bcrypt
 
+from load_data import DataLoader
+
 load_dotenv()
-
-
-class DataLoader:
-    """Handles reading and writing data from SQLite databases."""
-
-    def __init__(self, db_path, table_name):
-        self.db_path = db_path
-        self.table_name = table_name
-
-    def get_data(self) -> pd.DataFrame:
-        try:
-            conn = sqlite3.connect(self.db_path)
-            df = pd.read_sql_query(f"SELECT * FROM {self.table_name}", conn)
-            conn.close()
-            return df
-        except Exception as e:
-            print(f"❌ Failed to load data from {self.table_name}: {e}")
-            return pd.DataFrame()
-
-    def update_data(self, df: pd.DataFrame):
-        try:
-            conn = sqlite3.connect(self.db_path)
-            df.to_sql(self.table_name, conn, if_exists="replace", index=False)
-            conn.close()
-            print(f"✅ {self.table_name} aktualisiert.")
-        except Exception as e:
-            print(f"❌ Fehler beim Schreiben in {self.table_name}: {e}")
 
 
 class Dashboard:
@@ -143,6 +117,7 @@ class Dashboard:
                                     id="password-input",
                                     type="password",
                                     placeholder="Passwort",
+                                    n_submit=0,
                                     style={"width": "100%", "padding": "8px"},
                                 ),
                                 html.Div(
@@ -304,17 +279,19 @@ class Dashboard:
         @self.app.callback(
             Output("password-modal", "is_open"),
             Output("password-error", "children"),
+            Output("password-input", "value"),
             Output("jury-access", "data"),
             Input("view-switch-btn", "n_clicks"),
             Input("submit-password", "n_clicks"),
             Input("cancel-password", "n_clicks"),
+            Input("password-input", "n_submit"),
             State("password-modal", "is_open"),
             State("password-input", "value"),
             State("jury-access", "data"),
             prevent_initial_call=True,
         )
         def toggle_password_modal(
-            open_clicks, submit_clicks, cancel_clicks, is_open, password, has_access
+            open_clicks, submit_clicks, enter_submit, cancel_clicks, is_open, password, has_access
         ):
             ctx = dash.callback_context
             if not ctx.triggered:
@@ -327,26 +304,24 @@ class Dashboard:
             STORED_HASH: object = CONFIG["jury_password_hash"].encode()
             correct_password_hash = STORED_HASH
 
-            # correct_password = os.getenv("JURY_PASSWORD")
-
             if button_id == "view-switch-btn":
                 if has_access:
                     # if jury mode activ -> switch back
-                    return False, "", False
+                    return False, "", "", False
                 else:
                     # if jury mode is about to be activated -> ask for password
-                    return True, "", False
+                    return True, "", "", False
 
-            elif button_id == "submit-password":
+            elif button_id in ("submit-password", "password-input"):
                 if password and bcrypt.checkpw(
                     password.encode(), correct_password_hash
                 ):
-                    return False, "", True  # correct
+                    return False, "", "", True  # correct
                 else:
-                    return True, "❌ Falsches Passwort!", False
+                    return True, "❌ Falsches Passwort!", "", False
 
             elif button_id == "cancel-password":
-                return False, "", has_access
+                return False, "", "", has_access
             else:
                 raise dash.exceptions.PreventUpdate
 
