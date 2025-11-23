@@ -7,13 +7,17 @@ import dash_daq as daq
 import pandas as pd
 import numpy as np
 import dash_bootstrap_components as dbc
-from dotenv import load_dotenv
 import json
 import bcrypt
 
 from load_data import DataLoader
 
-load_dotenv()
+
+# constants
+with open("config.json", "r") as f:
+    CONFIG = json.load(f)
+
+STORED_HASH: object = CONFIG["jury_password_hash"].encode()
 
 
 class Dashboard:
@@ -51,9 +55,6 @@ class Dashboard:
 
     # ----------------- UI -----------------
     def _build_layout(self):
-        # df = DataLoader("../data/fahrerinnen.db", "fahrerinnen").get_data()
-        # theme = self.DARK_THEME
-
         return html.Div(
             id="page-container",
             style={
@@ -156,7 +157,6 @@ class Dashboard:
             ],
         )
 
-    # ----------------- Data Table -----------------
     def _datatable(self, df: pd.DataFrame, theme, editable=False, jury_mode=False):
         if df.empty:
             return html.Div(
@@ -291,17 +291,19 @@ class Dashboard:
             prevent_initial_call=True,
         )
         def toggle_password_modal(
-            open_clicks, submit_clicks, enter_submit, cancel_clicks, is_open, password, has_access
+            open_clicks,
+            submit_clicks,
+            enter_submit,
+            cancel_clicks,
+            is_open,
+            password,
+            has_access,
         ):
             ctx = dash.callback_context
             if not ctx.triggered:
                 raise dash.exceptions.PreventUpdate
             button_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-            with open("config.json", "r") as f:
-                CONFIG = json.load(f)
-
-            STORED_HASH: object = CONFIG["jury_password_hash"].encode()
             correct_password_hash = STORED_HASH
 
             if button_id == "view-switch-btn":
