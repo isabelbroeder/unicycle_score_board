@@ -100,6 +100,7 @@ connection.commit()
 connection_kuer = sqlite3.connect("../data/kuer.db")
 cursor_kuer = connection_kuer.cursor()
 
+cursor_kuer.execute("DROP TABLE IF EXISTS kuer")
 
 sql_erstellen = """
 CREATE TABLE kuer (
@@ -108,7 +109,7 @@ Kuername VARCHAR(50),
 Kategorie VARCHAR(20),
 Altersklasse VARCHAR(3));"""
 
-# cursor_kuer.execute(sql_erstellen)
+cursor_kuer.execute(sql_erstellen)
 
 
 def kueren_in_db(df_anmeldung, kategorie: str, connection: sqlite3.Connection, cursor: sqlite3.Cursor):
