@@ -13,6 +13,9 @@ import bcrypt
 from load_data import DataLoader
 
 
+ROUTINE_DATA = ["routine_name", "category", "age_group"]
+
+
 # constants
 with open("config.json", "r") as f:
     CONFIG = json.load(f)
@@ -167,26 +170,26 @@ class Dashboard:
         dropdown = {}
 
         if jury_mode:
-            df_kuer = DataLoader("../data/kuer.db", "kuer").get_data()
+            df_routines = DataLoader("../data/routines.db", "routines").get_data()
             df_punkte = DataLoader("../data/punkte.db", "punkte").get_data()
 
             # Sicherstellen, dass alle Kürkombinationen einmalig sind
-            df_kuer = df_kuer.drop_duplicates(
-                subset=["Kuername", "Kategorie", "Altersklasse"]
+            df_routines = df_routines.drop_duplicates(
+                subset = ROUTINE_DATA
             )
             if df_punkte.empty:
                 df_punkte = pd.DataFrame(
-                    columns=["Kuername", "Kategorie", "Altersklasse"]
+                    columns = ROUTINE_DATA
                 )
             df_punkte = df_punkte.drop_duplicates(
-                subset=["Kuername", "Kategorie", "Altersklasse"]
+                subset = ROUTINE_DATA
             )
 
             # Merge ohne Duplikate, Kürstruktur bleibt gleich
-            key_cols = ["Kuername", "Kategorie", "Altersklasse"]
-            cols_to_drop = [c for c in df_punkte.columns if c in df_kuer.columns and c not in key_cols]
+            key_cols = ROUTINE_DATA
+            cols_to_drop = [c for c in df_punkte.columns if c in df_routines.columns and c not in key_cols]
             df_punkte = df_punkte.drop(columns=cols_to_drop)
-            df = df_kuer.merge(df_punkte, on=key_cols, how="left")
+            df = df_routines.merge(df_punkte, on=key_cols, how="left")
 
             all_judges = (
                 [f"T{i}" for i in range(1, 5)]
@@ -199,8 +202,8 @@ class Dashboard:
 
 
             def set_uneditable_judges(row):
-                cat = row["Kategorie"]
-                if cat in ["EK", "PK"]:
+                cat = row["category"]
+                if cat in ["individual", "pair"]:
                     row["D3"] = row["D4"] = "–"
                 return row
 
@@ -275,10 +278,10 @@ class Dashboard:
             style_data_conditional=[
                 {"if": {"row_index": "odd"}, "backgroundColor": theme["oddRowBg"]},
 
-                # lock D3 + D4 for EK + PK (visual + pointer events)
+                # lock D3 + D4 for individual + PK (visual + pointer events)
                 {
                     "if": {
-                        "filter_query": "{Kategorie} = 'EK'",
+                        "filter_query": "{category} = 'individual'",
                         "column_id": ["D3", "D4"]
                     },
                     "pointerEvents": "none",
@@ -286,7 +289,7 @@ class Dashboard:
                 },
                 {
                     "if": {
-                        "filter_query": "{Kategorie} = 'PK'",
+                        "filter_query": "{category} = 'pair'",
                         "column_id": ["D3", "D4"]
                     },
                     "pointerEvents": "none",
@@ -374,12 +377,12 @@ class Dashboard:
             }
 
             if jury_mode:
-                df = DataLoader("../data/kuer.db", "kuer").get_data()
+                df = DataLoader("../data/routines.db", "routines").get_data()
                 title = "⚖️ Jury Übersicht"
                 button_text = "👥 Wechsel zu Teilnehmer Ansicht"
                 table = self._datatable(df, theme, editable=True, jury_mode=True)
             else:
-                df = DataLoader("../data/fahrerinnen.db", "fahrerinnen").get_data()
+                df = DataLoader("../data/riders.db", "riders").get_data()
                 title = "🏁 Teilnehmer Übersicht"
                 button_text = "⚖️ Wechsel zu Jury Ansicht"
                 table = self._datatable(df, theme, editable=False, jury_mode=False)
@@ -409,9 +412,9 @@ class Dashboard:
                     df[col] = np.nan
 
             # --- CLEAN / VALIDATE ---
-            def clamp_cell(value, kategorie, colname):
-                # If D3 or D4 and Kategorie is EK or PK -> force "–" and disallow numeric entry
-                if colname in ["D3", "D4"] and kategorie in ["EK", "PK"]:
+            def clamp_cell(value, category, colname):
+                # If D3 or D4 and category is individual or pair -> force "–" and disallow numeric entry
+                if colname in ["D3", "D4"] and category in ["individual", "pair"]:
                     return "–"
                 # Accept the dash as-is
                 if value == "–":
@@ -432,11 +435,11 @@ class Dashboard:
                 return v
 
             # Apply clamping per-row and per-scoring column
-            if 'Kategorie' not in df.columns:
-                df['Kategorie'] = None
+            if 'category' not in df.columns:
+                df['category'] = None
 
             for col in scoring_cols:
-                df[col] = df.apply(lambda r: clamp_cell(r.get(col), r.get('Kategorie'), col), axis=1)
+                df[col] = df.apply(lambda r: clamp_cell(r.get(col), r.get('category'), col), axis=1)
 
             # --- Recompute total ---
             def compute_total(row):
