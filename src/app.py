@@ -197,7 +197,7 @@ class Dashboard:
                 if j not in df.columns:
                     df[j] = np.nan
 
-            # Setze "–" für nicht bewertende Judges und sperre die Spalte
+
             def set_uneditable_judges(row):
                 cat = row["Kategorie"]
                 if cat in ["EK", "PK"]:
@@ -206,7 +206,7 @@ class Dashboard:
 
             df = df.apply(set_uneditable_judges, axis=1)
 
-            # Gesamtpunkte live berechnen ("–" zählt als 0)
+            # calculation of all points per row ("–" = 0)
             def compute_total(row):
                 total = 0
                 for col in all_judges:
@@ -222,7 +222,7 @@ class Dashboard:
 
             df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
 
-        # Spalten definieren
+
         columns = []
         for col in df.columns:
             # Jury scoring columns numeric display (T1–T4, P1–P4)
@@ -248,9 +248,6 @@ class Dashboard:
             else:
                 columns.append({"name": col, "id": col, "editable": False})
 
-        # Gesamtpunkte ans Ende verschieben, nur wenn vorhanden
-        if "Gesamtpunkte" in df.columns:
-            df = df[[c for c in df.columns if c != "Gesamtpunkte"] + ["Gesamtpunkte"]]
 
         return dash_table.DataTable(
             id="data-table",
