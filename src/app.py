@@ -183,9 +183,10 @@ class Dashboard:
             )
 
             # Merge ohne Duplikate, Kürstruktur bleibt gleich
-            df = df_kuer.merge(
-                df_punkte, on=["Kuername", "Kategorie", "Altersklasse"], how="left"
-            )
+            key_cols = ["Kuername", "Kategorie", "Altersklasse"]
+            cols_to_drop = [c for c in df_punkte.columns if c in df_kuer.columns and c not in key_cols]
+            df_punkte = df_punkte.drop(columns=cols_to_drop)
+            df = df_kuer.merge(df_punkte, on=key_cols, how="left")
 
             all_judges = (
                 [f"T{i}" for i in range(1, 5)]
@@ -224,20 +225,26 @@ class Dashboard:
         # Spalten definieren
         columns = []
         for col in df.columns:
-            if jury_mode and col in all_judges:
-                if (
-                    col.startswith("D")
-                    and df["Kategorie"].iloc[0] in ["EK", "PK"]
-                    and col in ["D3", "D4"]
-                ):
-                    editable_flag = False  # EK/PK, D3/D4 immer nicht editierbar
-                else:
-                    editable_flag = True if df[col].iloc[0] != "–" else False
-                columns.append({"name": col, "id": col, "editable": editable_flag})
+            # Jury scoring columns numeric display (T1–T4, P1–P4)
+            if jury_mode and col in [f"T{i}" for i in range(1,5)] + [f"P{i}" for i in range(1,5)] + [f"D{i}" for i in range(1,3)]:
+                columns.append({
+                    "name": col,
+                    "id": col,
+                    "type": "numeric",
+                    "editable": True
+                })
+
+            # D3 + D4 (special locking logic handled row-wise via style + callback)
+            elif jury_mode and col in ["D3", "D4"]:
+                columns.append({
+                    "name": col,
+                    "id": col,
+                    "type": "numeric",
+                    "editable": True
+                })
+
             elif col == "Gesamtpunkte":
-                columns.append(
-                    {"name": col, "id": col, "type": "numeric", "editable": False}
-                )
+                columns.append({"name": col, "id": col, "type": "numeric", "editable": False})
             else:
                 columns.append({"name": col, "id": col, "editable": False})
 
@@ -269,7 +276,25 @@ class Dashboard:
                 "border": f"1px solid {theme['border']}",
             },
             style_data_conditional=[
-                {"if": {"row_index": "odd"}, "backgroundColor": theme["oddRowBg"]}
+                {"if": {"row_index": "odd"}, "backgroundColor": theme["oddRowBg"]},
+
+                # lock D3 + D4 for EK + PK (visual + pointer events)
+                {
+                    "if": {
+                        "filter_query": "{Kategorie} = 'EK'",
+                        "column_id": ["D3", "D4"]
+                    },
+                    "pointerEvents": "none",
+                    "color": "#888"
+                },
+                {
+                    "if": {
+                        "filter_query": "{Kategorie} = 'PK'",
+                        "column_id": ["D3", "D4"]
+                    },
+                    "pointerEvents": "none",
+                    "color": "#888"
+                }
             ],
         )
 
@@ -371,33 +396,76 @@ class Dashboard:
             prevent_initial_call=True,
         )
         def update_points(rows, current_state):
-            if rows:
-                df = pd.DataFrame(rows)
-                all_judges = (
-                    [f"T{i}" for i in range(1, 5)]
-                    + [f"P{i}" for i in range(1, 5)]
-                    + [f"D{i}" for i in range(1, 5)]
-                )
+            # rows: new data submitted from the DataTable
+            # current_state: previous state (not used, kept for signature compatibility)
+            if not rows:
+                raise dash.exceptions.PreventUpdate
 
-                # Gesamtpunkte live berechnen
-                def compute_total(row):
-                    total = 0
-                    for col in all_judges:
-                        val = row[col]
-                        if val == "–" or pd.isna(val):
+            df = pd.DataFrame(rows)
+
+            # judge columns (we handle them as text in DB; convert safely here)
+            scoring_cols = [f"T{i}" for i in range(1,5)] + [f"P{i}" for i in range(1,5)] + [f"D{i}" for i in range(1,5)]
+
+            # Ensure columns exist
+            for col in scoring_cols:
+                if col not in df.columns:
+                    df[col] = np.nan
+
+            # --- CLEAN / VALIDATE ---
+            def clamp_cell(value, kategorie, colname):
+                # If D3 or D4 and Kategorie is EK or PK -> force "–" and disallow numeric entry
+                if colname in ["D3", "D4"] and kategorie in ["EK", "PK"]:
+                    return "–"
+                # Accept the dash as-is
+                if value == "–":
+                    return "–"
+                # Try to convert to float; if not possible, treat as 0
+                try:
+                    v = float(value)
+                except Exception:
+                    # Some entries might be pandas NaN or None; treat as 0
+                    return 0
+                # Clamp to 0..10
+                if v < 0:
+                    return 0
+                if v > 10:
+                    return 10
+                # If it's an integer-like value, keep it as float/int (DB will store as text/numeric on to_sql)
+                # Return numeric for downstream total calculation
+                return v
+
+            # Apply clamping per-row and per-scoring column
+            if 'Kategorie' not in df.columns:
+                df['Kategorie'] = None
+
+            for col in scoring_cols:
+                df[col] = df.apply(lambda r: clamp_cell(r.get(col), r.get('Kategorie'), col), axis=1)
+
+            # --- Recompute total ---
+            def compute_total(row):
+                total = 0
+                for col in scoring_cols:
+                    val = row.get(col)
+                    if val == "–" or pd.isna(val):
+                        total += 0
+                    else:
+                        try:
+                            total += float(val)
+                        except:
                             total += 0
-                        else:
-                            try:
-                                total += float(val)
-                            except:
-                                total += 0
-                    return total
+                return total
 
-                df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
+            df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
 
-                # Punkte speichern (keine Duplikate)
-                DataLoader("../data/punkte.db", "punkte").update_data(df)
-            return df.to_dict("records")
+            # --- Save to DB (punkte.db) ---
+            # Ensure the points DB exists or will be created automatically by to_sql
+            # We only write the columns present in df (which include kuer keys + judge cols + Gesamtpunkte)
+            try:
+                DataLoader('../data/punkte.db', 'punkte').update_data(df)
+            except Exception as e:
+                print("Fehler beim Speichern der Punkte:", e)
+
+            return df.to_dict('records')
 
     def run(self):
         self.app.run(debug=True)
