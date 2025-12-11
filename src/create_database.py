@@ -4,7 +4,7 @@ import sqlite3
 import pandas
 import pandas as pd
 
-from funktionen import calculate_age
+from functions import calculate_age
 
 WETTKAMPFTAG = datetime.datetime(2025, 5, 1, 0, 0)
 CATEGORIES = ["individual", "pair", "small_group", "large_group"]
