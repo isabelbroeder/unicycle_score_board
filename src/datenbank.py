@@ -2,7 +2,6 @@ import datetime
 import sqlite3
 import pandas as pd
 
-from funktionen import alter_berechnen
 
 WETTKAMPFTAG = datetime.datetime(2025, 5, 1, 0, 0)
 KATEGORIEN = ["EK", "PK", "KG", "GG"]
@@ -34,25 +33,62 @@ anmeldung = anmeldung[
     anmeldung["Name"].notna()
 ]  # nur die Zeilen, die einen Namen enthalten speichern
 anmeldung = anmeldung.drop(columns="Startgeld")
-# print(anmeldung)
-# anmeldung = anmeldung.where(anmeldung.notna(), np.nan)
-# print(anmeldung)
+# print(registration)
+# registration = registration.where(registration.notna(), np.nan)
+# print(registration)
 
-# print(anmeldung.dtypes)
+# print(registration.dtypes)
 anmeldung = anmeldung.convert_dtypes()
 
 
 # Verein hinzufügen
 anzahl_fahrerinnen = anmeldung["Name"].size
 anmeldung.insert(4, "Verein", ["BW96 Schenefeld"] * anzahl_fahrerinnen)
-print("anmeldung.columns", anmeldung.columns)
+print("registration.columns", anmeldung.columns)
+
+
+# Datenbank fährt_kür erstellen
+def starts_in_db(
+    df_anmeldung, kategorie: str, connection: sqlite3.Connection, cursor: sqlite3.Cursor
+):
+    for zeile in range(0, anzahl_fahrerinnen):
+        print(
+            zeile,
+            anmeldung["Name"][zeile],
+            anmeldung["Name_EK"][zeile],
+            anmeldung["Name_PK"][zeile],
+        )
+
+
+connection = sqlite3.connect("../data/faehrt_kuer.db")
+cursor = connection.cursor()
+starts_in_db(anmeldung, "EK", connection, cursor)
+'''
+    spalte_name = "Name_" + str(kategorie)
+    spalte_kuername = "Kürname_" + str(kategorie)
+    spalte_ak = "AK_" + str(kategorie)
+    kuernamen = df_anmeldung[spalte_kuername].dropna().unique()
+    kuernamen = [
+        s for s in kuernamen if s.strip() != ""
+    ]  # entfernt Strings, die nur aus Leerzeichen bestehen
+    
+    
+
+    for kuername in kuernamen:
+        sql_einfuegen = (
+            """INSERT INTO faehrt (Kuer_Nummer, Kuername, Name) VALUES (?, ?, ?) """
+        )
+        daten = (None, kuername, df_anmeldung["Name"].where(spalte_kuername == kuername))
+        cursor.execute(sql_einfuegen, daten)
+        connection.commit()
+
 
 
 # Datenbank verbinden
 connection = sqlite3.connect("../data/fahrerinnen.db")
 cursor = connection.cursor()
 
-df_fahrerinnen = anmeldung[["Name", "Geburtsdatum", "Alter", "Geschlecht", "Verein"]]
+df_fahrerinnen = registration[["Name", "Geburtsdatum", "Alter", "Geschlecht", "Verein"]]
 # df_fahrerinnen.to_sql('fahrerinnen', connection, if_exists = 'append')
 
 cursor.execute("DROP TABLE IF EXISTS fahrerinnen")
@@ -118,19 +154,24 @@ def kueren_in_db(df_anmeldung, kategorie: str, connection: sqlite3.Connection, c
     kuernamen = [
         s for s in kuernamen if s.strip() != ""
     ]  # entfernt Strings, die nur aus Leerzeichen bestehen
+    kuer_nummer = 0
     for kuername in kuernamen:
+        kuer_nummer = kuer_nummer + 1
         ak_kuer = ((df_anmeldung[spalte_ak].where(kuername==df_anmeldung[spalte_name])).dropna()).iloc[0]
         print(ak_kuer)
         sql_einfuegen = (
             """INSERT INTO kuer (Kuer_Nummer, Kuername, Kategorie, Altersklasse) VALUES (?, ?, ?, ?) """
         )
-        daten = (None, kuername, kategorie, ak_kuer)
+        daten = (kuer_nummer, kuername, kategorie, ak_kuer)
         cursor.execute(sql_einfuegen, daten)
     connection.commit()
 
 
 for kategorie in KATEGORIEN:
-    kueren_in_db(anmeldung, kategorie, connection_kuer, cursor_kuer)
+    kueren_in_db(registration, kategorie, connection_kuer, cursor_kuer)
+
 
 connection.close()
 connection_kuer.close()
+
+'''
