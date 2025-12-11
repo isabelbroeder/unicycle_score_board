@@ -171,25 +171,23 @@ class Dashboard:
 
         if jury_mode:
             df_routines = DataLoader("../data/routines.db", "routines").get_data()
-            df_punkte = DataLoader("../data/punkte.db", "punkte").get_data()
+            df_points = DataLoader("../data/points.db", "points").get_data()
 
             # Sicherstellen, dass alle Kürkombinationen einmalig sind
-            df_routines = df_routines.drop_duplicates(
-                subset = ROUTINE_DATA
-            )
-            if df_punkte.empty:
-                df_punkte = pd.DataFrame(
-                    columns = ROUTINE_DATA
-                )
-            df_punkte = df_punkte.drop_duplicates(
-                subset = ROUTINE_DATA
-            )
+            df_routines = df_routines.drop_duplicates(subset=ROUTINE_DATA)
+            if df_points.empty:
+                df_points = pd.DataFrame(columns=ROUTINE_DATA)
+            df_points = df_points.drop_duplicates(subset=ROUTINE_DATA)
 
             # Merge ohne Duplikate, Kürstruktur bleibt gleich
             key_cols = ROUTINE_DATA
-            cols_to_drop = [c for c in df_punkte.columns if c in df_routines.columns and c not in key_cols]
-            df_punkte = df_punkte.drop(columns=cols_to_drop)
-            df = df_routines.merge(df_punkte, on=key_cols, how="left")
+            cols_to_drop = [
+                c
+                for c in df_points.columns
+                if c in df_routines.columns and c not in key_cols
+            ]
+            df_points = df_points.drop(columns=cols_to_drop)
+            df = df_routines.merge(df_points, on=key_cols, how="left")
 
             all_judges = (
                 [f"T{i}" for i in range(1, 5)]
@@ -199,7 +197,6 @@ class Dashboard:
             for j in all_judges:
                 if j not in df.columns:
                     df[j] = np.nan
-
 
             def set_uneditable_judges(row):
                 cat = row["category"]
@@ -225,32 +222,28 @@ class Dashboard:
 
             df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
 
-
         columns = []
         for col in df.columns:
             # Jury scoring columns numeric display (T1–T4, P1–P4)
-            if jury_mode and col in [f"T{i}" for i in range(1,5)] + [f"P{i}" for i in range(1,5)] + [f"D{i}" for i in range(1,3)]:
-                columns.append({
-                    "name": col,
-                    "id": col,
-                    "type": "numeric",
-                    "editable": True
-                })
+            if jury_mode and col in [f"T{i}" for i in range(1, 5)] + [
+                f"P{i}" for i in range(1, 5)
+            ] + [f"D{i}" for i in range(1, 3)]:
+                columns.append(
+                    {"name": col, "id": col, "type": "numeric", "editable": True}
+                )
 
             # D3 + D4 (special locking logic handled row-wise via style + callback)
             elif jury_mode and col in ["D3", "D4"]:
-                columns.append({
-                    "name": col,
-                    "id": col,
-                    "type": "numeric",
-                    "editable": True
-                })
+                columns.append(
+                    {"name": col, "id": col, "type": "numeric", "editable": True}
+                )
 
             elif col == "Gesamtpunkte":
-                columns.append({"name": col, "id": col, "type": "numeric", "editable": False})
+                columns.append(
+                    {"name": col, "id": col, "type": "numeric", "editable": False}
+                )
             else:
                 columns.append({"name": col, "id": col, "editable": False})
-
 
         return dash_table.DataTable(
             id="data-table",
@@ -277,24 +270,23 @@ class Dashboard:
             },
             style_data_conditional=[
                 {"if": {"row_index": "odd"}, "backgroundColor": theme["oddRowBg"]},
-
                 # lock D3 + D4 for individual + PK (visual + pointer events)
                 {
                     "if": {
                         "filter_query": "{category} = 'individual'",
-                        "column_id": ["D3", "D4"]
+                        "column_id": ["D3", "D4"],
                     },
                     "pointerEvents": "none",
-                    "color": "#888"
+                    "color": "#888",
                 },
                 {
                     "if": {
                         "filter_query": "{category} = 'pair'",
-                        "column_id": ["D3", "D4"]
+                        "column_id": ["D3", "D4"],
                     },
                     "pointerEvents": "none",
-                    "color": "#888"
-                }
+                    "color": "#888",
+                },
             ],
         )
 
@@ -377,15 +369,19 @@ class Dashboard:
             }
 
             if jury_mode:
-                df = DataLoader("../data/routines.db", "routines").get_data()
+                df_routines = DataLoader("../data/routines.db", "routines").get_data()
                 title = "⚖️ Jury Übersicht"
                 button_text = "👥 Wechsel zu Teilnehmer Ansicht"
-                table = self._datatable(df, theme, editable=True, jury_mode=True)
+                table = self._datatable(
+                    df_routines, theme, editable=True, jury_mode=True
+                )
             else:
-                df = DataLoader("../data/riders.db", "riders").get_data()
+                df_riders = DataLoader("../data/riders.db", "riders").get_data()
                 title = "🏁 Teilnehmer Übersicht"
                 button_text = "⚖️ Wechsel zu Jury Ansicht"
-                table = self._datatable(df, theme, editable=False, jury_mode=False)
+                table = self._datatable(
+                    df_riders, theme, editable=False, jury_mode=False
+                )
 
             return page_style, table, title, button_text, icon
 
@@ -404,7 +400,11 @@ class Dashboard:
             df = pd.DataFrame(rows)
 
             # judge columns (we handle them as text in DB; convert safely here)
-            scoring_cols = [f"T{i}" for i in range(1,5)] + [f"P{i}" for i in range(1,5)] + [f"D{i}" for i in range(1,5)]
+            scoring_cols = (
+                [f"T{i}" for i in range(1, 5)]
+                + [f"P{i}" for i in range(1, 5)]
+                + [f"D{i}" for i in range(1, 5)]
+            )
 
             # Ensure columns exist
             for col in scoring_cols:
@@ -435,11 +435,13 @@ class Dashboard:
                 return v
 
             # Apply clamping per-row and per-scoring column
-            if 'category' not in df.columns:
-                df['category'] = None
+            if "category" not in df.columns:
+                df["category"] = None
 
             for col in scoring_cols:
-                df[col] = df.apply(lambda r: clamp_cell(r.get(col), r.get('category'), col), axis=1)
+                df[col] = df.apply(
+                    lambda r: clamp_cell(r.get(col), r.get("category"), col), axis=1
+                )
 
             # --- Recompute total ---
             def compute_total(row):
@@ -457,15 +459,15 @@ class Dashboard:
 
             df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
 
-            # --- Save to DB (punkte.db) ---
+            # --- Save to DB (points.db) ---
             # Ensure the points DB exists or will be created automatically by to_sql
             # We only write the columns present in df (which include kuer keys + judge cols + Gesamtpunkte)
             try:
-                DataLoader('../data/punkte.db', 'punkte').update_data(df)
+                DataLoader("../data/points.db", "points").update_data(df)
             except Exception as e:
                 print("Fehler beim Speichern der Punkte:", e)
 
-            return df.to_dict('records')
+            return df.to_dict("records")
 
     def run(self):
         self.app.run(debug=True)
