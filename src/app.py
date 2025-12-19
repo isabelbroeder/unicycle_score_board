@@ -376,11 +376,19 @@ class Dashboard:
                     df_routines, theme, editable=True, jury_mode=True
                 )
             else:
-                df_riders = DataLoader("../data/riders.db", "riders").get_data()
+                df_riders = DataLoader("../data/riders.db", "riders").get_data(sql_query="SELECT id_rider,name,club FROM riders")
+                df_routines = DataLoader("../data/routines.db", "routines").get_data(sql_query="SELECT id_routine,routine_name,category,age_group FROM routines")
+                df_riders2routines = DataLoader("../data/riders_routines.db", "riders_routines").get_data()
+                df_display = df_riders2routines.merge(df_riders, on='id_rider', how='left')
+                df_display = df_display.merge(df_routines, on='id_routine', how='left')
+                df_display = (
+                    df_display.groupby(["routine_name"], as_index=False)
+                      .agg(names=("name", lambda x: ", ".join(x))
+                )).merge(df_routines, on='routine_name', how='left').drop(columns="id_routine")
                 title = "🏁 Teilnehmer Übersicht"
                 button_text = "⚖️ Wechsel zu Jury Ansicht"
                 table = self._datatable(
-                    df_riders, theme, editable=False, jury_mode=False
+                    df_display, theme, editable=False, jury_mode=False
                 )
 
             return page_style, table, title, button_text, icon
