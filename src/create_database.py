@@ -11,6 +11,13 @@ CATEGORIES = ["individual", "pair", "small_group", "large_group"]
 
 
 def read_registration_file(path: str, club: str) -> pandas.DataFrame:
+    """
+    Read the registration file
+    Keyword arguments:
+        path -- path to registration file
+        club -- club whose registration file is read in
+    return pandas.Dataframe with registration data
+    """
     # read registration file
     registration = pd.read_excel(path, sheet_name=1, skiprows=4)
     registration.columns = [
@@ -44,6 +51,11 @@ def read_registration_file(path: str, club: str) -> pandas.DataFrame:
 
 
 def create_database_riders(registration: pd.DataFrame):
+    """
+    create the database riders.db
+    Keyword arguments:
+        registration: dataframe with registration data
+    """
     # connect to database
     connection = sqlite3.connect("../data/riders.db")
     cursor = connection.cursor()
@@ -51,13 +63,13 @@ def create_database_riders(registration: pd.DataFrame):
     # df_riders.to_sql('fahrerinnen', connection, if_exists = 'append')
     cursor.execute("DROP TABLE IF EXISTS riders")
     sql_erstellen = """
-CREATE TABLE riders (
-id_rider INTEGER PRIMARY KEY,
-name VARCHAR(50),
-gender CHAR(1),
-date_of_birth DATE,
-age_competition_day INTEGER,
-club VARCHAR(50));"""
+        CREATE TABLE riders (
+        id_rider INTEGER PRIMARY KEY,
+        name VARCHAR(50),
+        gender CHAR(1),
+        date_of_birth DATE,
+        age_competition_day INTEGER,
+        club VARCHAR(50));"""
     cursor.execute(sql_erstellen)
     for row in range(0, len(registration)):
         age = calculate_age(
@@ -77,6 +89,11 @@ club VARCHAR(50));"""
 
 
 def create_database_routines(registration: pd.DataFrame):
+    """
+    create the databases routines.db and riders_routines.db
+    Keyword arguments:
+        registration: dataframe with registration data
+    """
     # create_database_routines
     connection_routines = sqlite3.connect("../data/routines.db")
     cursor_routines = connection_routines.cursor()
@@ -164,12 +181,18 @@ def create_database_routines(registration: pd.DataFrame):
                     connection_riders_routines.commit()
 
 
-registration = read_registration_file(
-    path="../data/Anmeldung_Landesmeisterschaft_2025.xlsx", club="BW96_Schenefeld"
-)
+def main():
+    registration = read_registration_file(
+        path="../data/Anmeldung_Landesmeisterschaft_2025.xlsx", club="BW96_Schenefeld"
+    )
+    create_database_riders(registration)
+
+    create_database_routines(registration)
+
+
+if __name__ == "__main__":
+    main()
 
 # print(registration)
-create_database_riders(registration)
 
-create_database_routines(registration)
 
