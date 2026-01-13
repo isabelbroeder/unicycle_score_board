@@ -112,7 +112,7 @@ def create_database_routines(registration: pd.DataFrame):
         id_routine = 0
 
     for category in CATEGORIES:
-        for age_group in set(registration["age_group_" + str(category)].dropna()):
+        for age_group in set(registration["age_group_" + str(category)].dropna()): #age groups in this category
             # print(category, age_group)
             # print(registration[str("age_group_" + category)])
             for routine_name in set(
@@ -120,7 +120,7 @@ def create_database_routines(registration: pd.DataFrame):
                     registration[str("name_" + category)].where(
                         registration[str("age_group_" + category)] == age_group
                     )
-                ).dropna()
+                ).dropna() # routine names in this category and age group
             ):
                 if routine_name.isspace():
                     continue
@@ -172,3 +172,4 @@ registration = read_registration_file(
 create_database_riders(registration)
 
 create_database_routines(registration)
+
