@@ -12,11 +12,15 @@ import bcrypt
 
 from load_data import DataLoader
 
-
-ROUTINE_DATA = ["routine_name", "category", "age_group"]
-
-
 # constants
+ROUTINE_DATA = ["id_routine", "routine_name", "category", "age_group"]
+
+ALL_JUDGES = (
+    [f"T{i}" for i in range(1, 5)]
+    + [f"P{i}" for i in range(1, 5)]
+    + [f"D{i}" for i in range(1, 5)]
+)
+
 with open("config.json", "r") as f:
     CONFIG = json.load(f)
 
@@ -173,31 +177,17 @@ class Dashboard:
             df_routines = DataLoader("../data/routines.db", "routines").get_data()
             df_points = DataLoader("../data/points.db", "points").get_data()
 
-            # Sicherstellen, dass alle Kürkombinationen einmalig sind
-            df_routines = df_routines.drop_duplicates(subset=ROUTINE_DATA)
             if df_points.empty:
                 df_points = pd.DataFrame(columns=ROUTINE_DATA)
-            df_points = df_points.drop_duplicates(subset=ROUTINE_DATA)
 
-            # Merge ohne Duplikate, Kürstruktur bleibt gleich
-            key_cols = ROUTINE_DATA
-            cols_to_drop = [
-                c
-                for c in df_points.columns
-                if c in df_routines.columns and c not in key_cols
-            ]
-            df_points = df_points.drop(columns=cols_to_drop)
-            df = df_routines.merge(df_points, on=key_cols, how="left")
+            # merge routine and points dataframes
+            df = df_routines.merge(df_points, on=ROUTINE_DATA, how="left")
 
-            all_judges = (
-                [f"T{i}" for i in range(1, 5)]
-                + [f"P{i}" for i in range(1, 5)]
-                + [f"D{i}" for i in range(1, 5)]
-            )
-            for j in all_judges:
-                if j not in df.columns:
-                    df[j] = np.nan
+            for col in ALL_JUDGES:
+                if col not in df.columns:
+                    df[col] = np.nan
 
+            # judges D3 and D4 are only judging groups
             def set_uneditable_judges(row):
                 cat = row["category"]
                 if cat in ["individual", "pair"]:
@@ -209,7 +199,7 @@ class Dashboard:
             # calculation of all points per row ("–" = 0)
             def compute_total(row):
                 total = 0
-                for col in all_judges:
+                for col in ALL_JUDGES:
                     val = row[col]
                     if val == "–" or pd.isna(val):
                         total += 0
@@ -225,9 +215,7 @@ class Dashboard:
         columns = []
         for col in df.columns:
             # Jury scoring columns numeric display (T1–T4, P1–P4)
-            if jury_mode and col in [f"T{i}" for i in range(1, 5)] + [
-                f"P{i}" for i in range(1, 5)
-            ] + [f"D{i}" for i in range(1, 3)]:
+            if jury_mode and col in ALL_JUDGES:
                 columns.append(
                     {"name": col, "id": col, "type": "numeric", "editable": True}
                 )
@@ -376,15 +364,28 @@ class Dashboard:
                     df_routines, theme, editable=True, jury_mode=True
                 )
             else:
-                df_riders = DataLoader("../data/riders.db", "riders").get_data(sql_query="SELECT id_rider,name,club FROM riders")
-                df_routines = DataLoader("../data/routines.db", "routines").get_data(sql_query="SELECT id_routine,routine_name,category,age_group FROM routines")
-                df_riders2routines = DataLoader("../data/riders_routines.db", "riders_routines").get_data()
-                df_display = df_riders2routines.merge(df_riders, on='id_rider', how='left')
-                df_display = df_display.merge(df_routines, on='id_routine', how='left')
+                df_riders = DataLoader("../data/riders.db", "riders").get_data(
+                    sql_query="SELECT id_rider,name,club FROM riders"
+                )
+                df_routines = DataLoader("../data/routines.db", "routines").get_data(
+                    sql_query="SELECT id_routine,routine_name,category,age_group FROM routines"
+                )
+                df_riders2routines = DataLoader(
+                    "../data/riders_routines.db", "riders_routines"
+                ).get_data()
+                df_display = df_riders2routines.merge(
+                    df_riders, on="id_rider", how="left"
+                )
+                df_display = df_display.merge(df_routines, on="id_routine", how="left")
                 df_display = (
-                    df_display.groupby(["routine_name"], as_index=False)
-                      .agg(names=("name", lambda x: ", ".join(x))
-                )).merge(df_routines, on='routine_name', how='left').drop(columns="id_routine")
+                    (
+                        df_display.groupby(["routine_name"], as_index=False).agg(
+                            names=("name", lambda x: ", ".join(x))
+                        )
+                    )
+                    .merge(df_routines, on="routine_name", how="left")
+                    .drop(columns="id_routine")
+                )
                 title = "🏁 Teilnehmer Übersicht"
                 button_text = "⚖️ Wechsel zu Jury Ansicht"
                 table = self._datatable(
@@ -400,61 +401,50 @@ class Dashboard:
             prevent_initial_call=True,
         )
         def update_points(rows, current_state):
-            # rows: new data submitted from the DataTable
-            # current_state: previous state (not used, kept for signature compatibility)
             if not rows:
                 raise dash.exceptions.PreventUpdate
 
             df = pd.DataFrame(rows)
 
-            # judge columns (we handle them as text in DB; convert safely here)
-            scoring_cols = (
-                [f"T{i}" for i in range(1, 5)]
-                + [f"P{i}" for i in range(1, 5)]
-                + [f"D{i}" for i in range(1, 5)]
-            )
-
             # Ensure columns exist
-            for col in scoring_cols:
+            for col in ALL_JUDGES:
                 if col not in df.columns:
                     df[col] = np.nan
 
-            # --- CLEAN / VALIDATE ---
+            # clamp judge values between 0 and 10 (D3 and D4 between 0 and 999)
             def clamp_cell(value, category, colname):
-                # If D3 or D4 and category is individual or pair -> force "–" and disallow numeric entry
                 if colname in ["D3", "D4"] and category in ["individual", "pair"]:
                     return "–"
-                # Accept the dash as-is
                 if value == "–":
                     return "–"
-                # Try to convert to float; if not possible, treat as 0
                 try:
                     v = float(value)
                 except Exception:
-                    # Some entries might be pandas NaN or None; treat as 0
-                    return 0
-                # Clamp to 0..10
+                    return np.nan
                 if v < 0:
-                    return 0
-                if v > 10:
-                    return 10
-                # If it's an integer-like value, keep it as float/int (DB will store as text/numeric on to_sql)
-                # Return numeric for downstream total calculation
+                    return np.nan
+                if colname in ["D3", "D4"]:
+                    if v > 999 or not v.is_integer():
+                        return np.nan
+                    return int(v)
+                else:
+                    if v > 10:
+                        return np.nan
                 return v
 
             # Apply clamping per-row and per-scoring column
             if "category" not in df.columns:
                 df["category"] = None
 
-            for col in scoring_cols:
+            for col in ALL_JUDGES:
                 df[col] = df.apply(
                     lambda r: clamp_cell(r.get(col), r.get("category"), col), axis=1
                 )
 
-            # --- Recompute total ---
+            # recompute total
             def compute_total(row):
                 total = 0
-                for col in scoring_cols:
+                for col in ALL_JUDGES:
                     val = row.get(col)
                     if val == "–" or pd.isna(val):
                         total += 0
@@ -467,7 +457,7 @@ class Dashboard:
 
             df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
 
-            # --- Save to DB (points.db) ---
+            # save to points.db
             # Ensure the points DB exists or will be created automatically by to_sql
             # We only write the columns present in df (which include kuer keys + judge cols + Gesamtpunkte)
             try:
