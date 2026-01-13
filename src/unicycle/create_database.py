@@ -57,7 +57,7 @@ def create_database_riders(registration: pd.DataFrame):
         registration: dataframe with registration data
     """
     # connect to database
-    connection = sqlite3.connect("../data/riders.db")
+    connection = sqlite3.connect("../../data/riders.db")
     cursor = connection.cursor()
     df_riders = registration[["name", "date_of_birth", "age", "gender", "club"]]
     # df_riders.to_sql('fahrerinnen', connection, if_exists = 'append')
@@ -95,7 +95,7 @@ def create_database_routines(registration: pd.DataFrame):
         registration: dataframe with registration data
     """
     # create_database_routines
-    connection_routines = sqlite3.connect("../data/routines.db")
+    connection_routines = sqlite3.connect("../../data/routines.db")
     cursor_routines = connection_routines.cursor()
     cursor_routines.execute("DROP TABLE IF EXISTS routines")
     sql_create = """
@@ -108,7 +108,7 @@ def create_database_routines(registration: pd.DataFrame):
     connection_routines.commit()
 
     # create_database_riders_routines
-    connection_riders_routines = sqlite3.connect("../data/riders_routines.db")
+    connection_riders_routines = sqlite3.connect("../../data/riders_routines.db")
     cursor_riders_routines = connection_riders_routines.cursor()
     cursor_riders_routines.execute("DROP TABLE IF EXISTS riders_routines")
     sql_create = """
@@ -119,7 +119,7 @@ def create_database_routines(registration: pd.DataFrame):
     cursor_riders_routines.execute(sql_create)
     connection_riders_routines.commit()
 
-    connection_riders = sqlite3.connect("../data/riders.db")
+    connection_riders = sqlite3.connect("../../data/riders.db")
     cursor_riders = connection_riders.cursor()
 
     sql_select_max_id = """SELECT MAX(id_routine) FROM routines"""
@@ -183,7 +183,7 @@ def create_database_routines(registration: pd.DataFrame):
 
 def main():
     registration = read_registration_file(
-        path="../data/Anmeldung_Landesmeisterschaft_2025.xlsx", club="BW96_Schenefeld"
+        path="../../data/Anmeldung_Landesmeisterschaft_2025.xlsx", club="BW96_Schenefeld"
     )
     create_database_riders(registration)
 
