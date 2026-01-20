@@ -13,13 +13,23 @@ import bcrypt
 from load_data import DataLoader
 
 # constants
-ROUTINE_DATA = ["id_routine", "routine_name", "category", "age_group"]
+ROUTINE_DATA = ["id_routine", "routine_name", "age_group", "category"]
 
-ALL_JUDGES = (
-    [f"T{i}" for i in range(1, 5)]
-    + [f"P{i}" for i in range(1, 5)]
-    + [f"D{i}" for i in range(1, 5)]
-)
+# technique, style, expression
+TECH_SUBS = ["T", "S", "E"]
+
+TP_JUDGES = [f"T{i}" for i in range(1, 5)] + [f"P{i}" for i in range(1, 5)]
+
+TP_SUBCOLS = [f"{j}_{s}" for j in TP_JUDGES for s in TECH_SUBS]
+
+SCORE_COLS = TP_SUBCOLS + ["D1", "D2", "D3", "D4"]
+
+T_COLS = [f"T{i}_{s}" for i in range(1, 5) for s in TECH_SUBS]
+P_COLS = [f"P{i}_{s}" for i in range(1, 5) for s in TECH_SUBS]
+
+D_COLS = ["D1", "D2", "D3", "D4"]
+
+ORDERED_COLS = ROUTINE_DATA + T_COLS + P_COLS + D_COLS + ["Gesamtpunkte"]
 
 with open("config.json", "r") as f:
     CONFIG = json.load(f)
@@ -183,7 +193,7 @@ class Dashboard:
             # merge routine and points dataframes
             df = df_routines.merge(df_points, on=ROUTINE_DATA, how="left")
 
-            for col in ALL_JUDGES:
+            for col in ORDERED_COLS:
                 if col not in df.columns:
                     df[col] = np.nan
 
@@ -199,44 +209,77 @@ class Dashboard:
             # calculation of all points per row ("–" = 0)
             def compute_total(row):
                 total = 0
-                for col in ALL_JUDGES:
+
+                # Technique / Presentation sub scores
+                for col in TP_SUBCOLS:
+                    val = row.get(col)
+                    if val == "–" or pd.isna(val):
+                        continue
+                    try:
+                        total += float(val)
+                    except Exception:
+                        pass
+
+                # Difficulty judges (D1–D4)
+                for col in ["D1", "D2", "D3", "D4"]:
+                    if col not in row:
+                        continue
                     val = row[col]
                     if val == "–" or pd.isna(val):
-                        total += 0
-                    else:
-                        try:
-                            total += float(val)
-                        except:
-                            total += 0
+                        continue
+                    try:
+                        total += float(val)
+                    except Exception:
+                        pass
+
                 return total
 
             df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
 
         columns = []
-        for col in df.columns:
-            # Jury scoring columns numeric display (T1–T4, P1–P4)
-            if jury_mode and col in ALL_JUDGES:
+
+        for col in ORDERED_COLS:
+            if col not in df.columns:
+                continue
+
+            # Technique / Presentation subcolumns
+            if col in TP_SUBCOLS:
+                judge, sub = col.split("_", 1)
                 columns.append(
-                    {"name": col, "id": col, "type": "numeric", "editable": True}
+                    {
+                        "name": [judge, sub],
+                        "id": col,
+                        "type": "numeric",
+                        "editable": jury_mode,
+                    }
                 )
 
-            # D3 + D4 (special locking logic handled row-wise via style + callback)
-            elif jury_mode and col in ["D3", "D4"]:
+            # Difficulty judges
+            elif col in D_COLS:
                 columns.append(
-                    {"name": col, "id": col, "type": "numeric", "editable": True}
+                    {
+                        "name": ["D", col],
+                        "id": col,
+                        "type": "numeric",
+                        "editable": jury_mode,
+                    }
                 )
 
+            # Gesamtpunkte
             elif col == "Gesamtpunkte":
                 columns.append(
-                    {"name": col, "id": col, "type": "numeric", "editable": False}
+                    {"name": ["", col], "id": col, "type": "numeric", "editable": False}
                 )
+
+            # Base columns (id, routine_name, age_group, category)
             else:
-                columns.append({"name": col, "id": col, "editable": False})
+                columns.append({"name": ["", col], "id": col, "editable": False})
 
         return dash_table.DataTable(
             id="data-table",
             data=df.to_dict("records"),
             columns=columns,
+            merge_duplicate_headers=True,
             dropdown=dropdown,
             editable=editable,
             filter_action="native",
@@ -407,7 +450,7 @@ class Dashboard:
             df = pd.DataFrame(rows)
 
             # Ensure columns exist
-            for col in ALL_JUDGES:
+            for col in SCORE_COLS:
                 if col not in df.columns:
                     df[col] = np.nan
 
@@ -423,7 +466,7 @@ class Dashboard:
                     return np.nan
                 if v < 0:
                     return np.nan
-                if colname in ["D3", "D4"]:
+                if colname in D_COLS:
                     if v > 999 or not v.is_integer():
                         return np.nan
                     return int(v)
@@ -436,7 +479,7 @@ class Dashboard:
             if "category" not in df.columns:
                 df["category"] = None
 
-            for col in ALL_JUDGES:
+            for col in SCORE_COLS:
                 df[col] = df.apply(
                     lambda r: clamp_cell(r.get(col), r.get("category"), col), axis=1
                 )
@@ -444,7 +487,7 @@ class Dashboard:
             # recompute total
             def compute_total(row):
                 total = 0
-                for col in ALL_JUDGES:
+                for col in SCORE_COLS:
                     val = row.get(col)
                     if val == "–" or pd.isna(val):
                         total += 0
