@@ -5,6 +5,7 @@ import pandas
 import pandas as pd
 
 from functions import calculate_age
+from pathlib import Path
 
 WETTKAMPFTAG = datetime.datetime(2025, 5, 1, 0, 0)
 CATEGORIES = ["individual", "pair", "small_group", "large_group"]
@@ -182,8 +183,9 @@ def create_database_routines(registration: pd.DataFrame):
 
 
 def main():
+    unicycle_score_board_path = Path(Path.cwd().parent.parent)
     registration = read_registration_file(
-        path="../../data/Anmeldung_Landesmeisterschaft_2025.xlsx", club="BW96_Schenefeld"
+        path=Path(unicycle_score_board_path, "data/Anmeldung_Landesmeisterschaft_2025.xlsx"), club="BW96_Schenefeld"
     )
     create_database_riders(registration)
 
