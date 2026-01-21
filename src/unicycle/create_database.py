@@ -109,19 +109,15 @@ def create_database_routines(registration: pd.DataFrame):
     cursor_routines = connection_routines.cursor()
 
     # create new database routines
-    try:
-        cursor_routines.execute("DROP TABLE IF EXISTS routines")
-        sql_create = """
-        CREATE TABLE routines (
-        id_routine INTEGER PRIMARY KEY AUTOINCREMENT,
-        routine_name VARCHAR(50),
-        category VARCHAR(20),
-        age_group VARCHAR(20));"""
-        cursor_routines.execute(sql_create)
-        connection_routines.commit()
-    except Exception as e:
-        print('Database')
-
+    cursor_routines.execute("DROP TABLE IF EXISTS routines")
+    sql_create = """
+    CREATE TABLE routines (
+    id_routine INTEGER PRIMARY KEY AUTOINCREMENT,
+    routine_name VARCHAR(50),
+    category VARCHAR(20),
+    age_group VARCHAR(20));"""
+    cursor_routines.execute(sql_create)
+    connection_routines.commit()
 
     # connect to database riders_routines
     connection_riders_routines = sqlite3.connect("../../data/riders_routines.db")
@@ -141,12 +137,6 @@ def create_database_routines(registration: pd.DataFrame):
     connection_riders = sqlite3.connect("../../data/riders.db")
     cursor_riders = connection_riders.cursor()
 
-    #
-    #sql_select_max_id = """SELECT MAX(id_routine) FROM routines"""
-    #id_routine = cursor_routines.execute(sql_select_max_id).fetchone()[0]
-    #print(id_routine)
-    #if id_routine == None:
-    #    id_routine = 0
 
     for category in CATEGORIES:
         for age_group in set(registration["age_group_" + str(category)].dropna()): #age groups in this category
@@ -161,8 +151,6 @@ def create_database_routines(registration: pd.DataFrame):
             ):
                 if routine_name.isspace():
                     continue
-                # += 1
-                # print(routine_name)
 
                 sql_insert = """INSERT INTO routines (routine_name, category, age_group) VALUES (? , ? , ? )  RETURNING id_routine"""
                 data = (
@@ -170,17 +158,10 @@ def create_database_routines(registration: pd.DataFrame):
                     category,
                     age_group,
                 )
-                try:
-                    cursor_routines.execute(sql_insert, data)
-                    connection_riders.commit()
-                    id_routine = cursor_routines.lastrowid
-                    #id_routine = cursor_routines.fetchmany()
 
-                except Exception as e:
-                    print("Error writing routine data in database", e)
-
-                #connection_routines.commit()
-                #id_routine = cursor_routines.fetchone()[0]
+                cursor_routines.execute(sql_insert, data)
+                connection_riders.commit()
+                id_routine = cursor_routines.lastrowid
                 print(id_routine, routine_name)
 
                 name_riders = (
@@ -206,10 +187,11 @@ def create_database_routines(registration: pd.DataFrame):
                         id_routine,
                     )
                     cursor_riders_routines.execute(sql_insert, data)
+
     connection_riders_routines.commit()
     connection_riders_routines.close()
-    #connection_routines.commit()
     connection_routines.close()
+    connection_riders.close()
 
 
 def main():
