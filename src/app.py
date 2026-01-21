@@ -13,7 +13,7 @@ import bcrypt
 from load_data import DataLoader
 
 # constants
-ROUTINE_DATA = ["id_routine", "routine_name", "age_group", "category"]
+ROUTINE_DATA = ["routine_name", "age_group", "category"]
 
 # technique, style, expression
 TECH_SUBS = ["T", "S", "E"]
