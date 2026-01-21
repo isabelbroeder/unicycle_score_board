@@ -16,10 +16,10 @@ from pathlib import Path
 from load_data import DataLoader
 
 # constants
-ROUTINE_DATA = ["routine_name", "age_group", "category"]
+BASE_COLS_PARTICIPANT = ["routine_name", "names", "age_group", "category"]
+BASE_COLS_JURY = ["routine_name", "age_group", "category"]
 
-# technique, style, expression
-TECH_SUBS = ["T", "S", "E"]
+TECH_SUBS = ["A", "B", "C"]
 
 TP_JUDGES = [f"T{i}" for i in range(1, 5)] + [f"P{i}" for i in range(1, 5)]
 
@@ -31,8 +31,6 @@ T_COLS = [f"T{i}_{s}" for i in range(1, 5) for s in TECH_SUBS]
 P_COLS = [f"P{i}_{s}" for i in range(1, 5) for s in TECH_SUBS]
 
 D_COLS = ["D1", "D2", "D3", "D4"]
-
-ORDERED_COLS = ROUTINE_DATA + T_COLS + P_COLS + D_COLS + ["Gesamtpunkte"]
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(script_dir, 'config.json')
@@ -189,17 +187,20 @@ class Dashboard:
 
         dropdown = {}
 
+        base_cols = BASE_COLS_JURY if jury_mode else BASE_COLS_PARTICIPANT
+        ordered_cols = base_cols + T_COLS + P_COLS + D_COLS + ["Gesamtpunkte"]
+
         if jury_mode:
             df_routines = DataLoader(Path(unicycle_score_board_path, "data/routines.db"), "routines").get_data()
             df_points = DataLoader(Path(unicycle_score_board_path, "data/points.db"), "points").get_data()
 
             if df_points.empty:
-                df_points = pd.DataFrame(columns=ROUTINE_DATA)
+                df_points = pd.DataFrame(columns=BASE_COLS_JURY)
 
             # merge routine and points dataframes
-            df = df_routines.merge(df_points, on=ROUTINE_DATA, how="left")
+            df = df_routines.merge(df_points, on=BASE_COLS_JURY, how="left")
 
-            for col in ORDERED_COLS:
+            for col in ordered_cols:
                 if col not in df.columns:
                     df[col] = np.nan
 
@@ -216,7 +217,6 @@ class Dashboard:
             def compute_total(row):
                 total = 0
 
-                # Technique / Presentation sub scores
                 for col in TP_SUBCOLS:
                     val = row.get(col)
                     if val == "–" or pd.isna(val):
@@ -226,8 +226,7 @@ class Dashboard:
                     except Exception:
                         pass
 
-                # Difficulty judges (D1–D4)
-                for col in ["D1", "D2", "D3", "D4"]:
+                for col in D_COLS:
                     if col not in row:
                         continue
                     val = row[col]
@@ -244,11 +243,10 @@ class Dashboard:
 
         columns = []
 
-        for col in ORDERED_COLS:
+        for col in ordered_cols:
             if col not in df.columns:
                 continue
 
-            # Technique / Presentation subcolumns
             if col in TP_SUBCOLS:
                 judge, sub = col.split("_", 1)
                 columns.append(
@@ -260,7 +258,6 @@ class Dashboard:
                     }
                 )
 
-            # Difficulty judges
             elif col in D_COLS:
                 columns.append(
                     {
@@ -271,21 +268,25 @@ class Dashboard:
                     }
                 )
 
-            # Gesamtpunkte
             elif col == "Gesamtpunkte":
                 columns.append(
                     {"name": ["", col], "id": col, "type": "numeric", "editable": False}
                 )
 
-            # Base columns (id, routine_name, age_group, category)
             else:
-                columns.append({"name": ["", col], "id": col, "editable": False})
+                columns.append(
+                    {
+                        "name": col if not jury_mode else ["", col],
+                        "id": col,
+                        "editable": False,
+                    }
+                )
 
         return dash_table.DataTable(
             id="data-table",
             data=df.to_dict("records"),
             columns=columns,
-            merge_duplicate_headers=True,
+            merge_duplicate_headers=jury_mode,
             dropdown=dropdown,
             editable=editable,
             filter_action="native",
@@ -496,12 +497,10 @@ class Dashboard:
             df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
 
             # save to points.db
-            # Ensure the points DB exists or will be created automatically by to_sql
-            # We only write the columns present in df (which include kuer keys + judge cols + Gesamtpunkte)
             try:
                 DataLoader(Path(unicycle_score_board_path, "data/points.db"), "points").update_data(df)
             except Exception as e:
-                print("Fehler beim Speichern der Punkte:", e)
+                print("Error saving points:", e)
 
             return df.to_dict("records")
 
