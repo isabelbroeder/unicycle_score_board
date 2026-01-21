@@ -152,7 +152,7 @@ def create_database_routines(registration: pd.DataFrame):
                 if routine_name.isspace():
                     continue
 
-                sql_insert = """INSERT INTO routines (routine_name, category, age_group) VALUES (? , ? , ? )  RETURNING id_routine"""
+                sql_insert = """INSERT INTO routines (routine_name, category, age_group) VALUES (? , ? , ? )"""
                 data = (
                     routine_name,
                     category,
@@ -160,7 +160,7 @@ def create_database_routines(registration: pd.DataFrame):
                 )
 
                 cursor_routines.execute(sql_insert, data)
-                connection_riders.commit()
+                connection_routines.commit()
                 id_routine = cursor_routines.lastrowid
                 print(id_routine, routine_name)
 

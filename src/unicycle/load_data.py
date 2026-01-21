@@ -36,7 +36,7 @@ class DataLoader:
         """
 
         if sql_query == None:
-            sql_query =  f"SELECT * FROM {self.table_name}"
+            sql_query = f"SELECT * FROM {self.table_name}"
         try:
             conn = sqlite3.connect(self.db_path)
             df = pd.read_sql_query(sql_query, con = conn, params = par)
