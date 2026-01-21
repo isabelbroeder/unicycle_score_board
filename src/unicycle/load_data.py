@@ -35,9 +35,7 @@ class DataLoader:
         Returns an empty DataFrame if the query fails.
         """
 
-        if sql_query is not None:
-            pass
-        else:
+        if sql_query == None:
             sql_query =  f"SELECT * FROM {self.table_name}"
         try:
             conn = sqlite3.connect(self.db_path)

@@ -2,13 +2,16 @@
 
 # %% import packages
 from dash import Dash, dash_table, html, Input, Output, State, dcc
-import dash
-import dash_daq as daq
-import pandas as pd
-import numpy as np
-import dash_bootstrap_components as dbc
-import json
 import bcrypt
+import dash
+import dash_bootstrap_components as dbc
+import dash_daq as daq
+import json
+import numpy as np
+import os
+import pandas as pd
+from pathlib import Path
+
 
 from load_data import DataLoader
 
@@ -170,8 +173,8 @@ class Dashboard:
         dropdown = {}
 
         if jury_mode:
-            df_routines = DataLoader("../data/routines.db", "routines").get_data()
-            df_points = DataLoader("../data/points.db", "points").get_data()
+            df_routines = DataLoader(Path(unicycle_score_board_path, "data/routines.db"), "routines").get_data()
+            df_points = DataLoader(Path(unicycle_score_board_path, "data/points.db"), "points").get_data()
 
             # Sicherstellen, dass alle Kürkombinationen einmalig sind
             df_routines = df_routines.drop_duplicates(subset=ROUTINE_DATA)
@@ -369,16 +372,16 @@ class Dashboard:
             }
 
             if jury_mode:
-                df_routines = DataLoader("../data/routines.db", "routines").get_data()
+                df_routines = DataLoader(Path(unicycle_score_board_path, "data/routines.db"), "routines").get_data()
                 title = "⚖️ Jury Übersicht"
                 button_text = "👥 Wechsel zu Teilnehmer Ansicht"
                 table = self._datatable(
                     df_routines, theme, editable=True, jury_mode=True
                 )
             else:
-                df_riders = DataLoader("../data/riders.db", "riders").get_data(sql_query="SELECT id_rider,name,club FROM riders")
-                df_routines = DataLoader("../data/routines.db", "routines").get_data(sql_query="SELECT id_routine,routine_name,category,age_group FROM routines")
-                df_riders2routines = DataLoader("../data/riders_routines.db", "riders_routines").get_data()
+                df_riders = DataLoader(Path(unicycle_score_board_path, "data/riders.db"), "riders").get_data(sql_query="SELECT id_rider,name,club FROM riders")
+                df_routines = DataLoader(Path(unicycle_score_board_path, "data/routines.db"), "routines").get_data(sql_query="SELECT id_routine,routine_name,category,age_group FROM routines")
+                df_riders2routines = DataLoader(Path(unicycle_score_board_path, "data/riders_routines.db"), "riders_routines").get_data()
                 df_display = df_riders2routines.merge(df_riders, on='id_rider', how='left')
                 df_display = df_display.merge(df_routines, on='id_routine', how='left')
                 df_display = (
@@ -471,7 +474,7 @@ class Dashboard:
             # Ensure the points DB exists or will be created automatically by to_sql
             # We only write the columns present in df (which include kuer keys + judge cols + Gesamtpunkte)
             try:
-                DataLoader("../data/points.db", "points").update_data(df)
+                DataLoader(Path(unicycle_score_board_path, "data/points.db"), "points").update_data(df)
             except Exception as e:
                 print("Fehler beim Speichern der Punkte:", e)
 

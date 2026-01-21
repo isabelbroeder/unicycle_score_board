@@ -5,12 +5,20 @@ import pandas
 import pandas as pd
 
 from functions import calculate_age
+from pathlib import Path
 
 WETTKAMPFTAG = datetime.datetime(2025, 5, 1, 0, 0)
 CATEGORIES = ["individual", "pair", "small_group", "large_group"]
 
 
 def read_registration_file(path: str, club: str) -> pandas.DataFrame:
+    """
+    Read the registration file
+    Keyword arguments:
+        path -- path to registration file
+        club -- club whose registration file is read in
+    return pandas.Dataframe with registration data
+    """
     # read registration file
     registration = pd.read_excel(path, sheet_name=1, skiprows=4)
     registration.columns = [
@@ -44,28 +52,38 @@ def read_registration_file(path: str, club: str) -> pandas.DataFrame:
 
 
 def create_database_riders(registration: pd.DataFrame):
+    """
+    create the database riders.db
+    Keyword arguments:
+        registration: dataframe with registration data
+    """
+
     # connect to database
-    connection = sqlite3.connect("../data/riders.db")
+    connection = sqlite3.connect("../../data/riders.db")
     cursor = connection.cursor()
-    df_riders = registration[["name", "date_of_birth", "age", "gender", "club"]]
-    # df_riders.to_sql('fahrerinnen', connection, if_exists = 'append')
+
+    # create new database
     cursor.execute("DROP TABLE IF EXISTS riders")
     sql_erstellen = """
-CREATE TABLE riders (
-id_rider INTEGER PRIMARY KEY,
-name VARCHAR(50),
-gender CHAR(1),
-date_of_birth DATE,
-age_competition_day INTEGER,
-club VARCHAR(50));"""
+        CREATE TABLE riders (
+        id_rider INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(50),
+        gender CHAR(1),
+        date_of_birth DATE,
+        age_competition_day INTEGER,
+        club VARCHAR(50));"""
     cursor.execute(sql_erstellen)
+    connection.commit()
+
+
+    # insert riders into database riders
+    df_riders = registration[["name", "date_of_birth", "age", "gender", "club"]]
     for row in range(0, len(registration)):
         age = calculate_age(
             df_riders["date_of_birth"][row].to_pydatetime(), WETTKAMPFTAG
         )
-        sql_insert = """INSERT INTO riders (id_rider, name, gender, date_of_birth, age_competition_day, club) VALUES (?, ? , ? , ? , ? , ?) """
+        sql_insert = """INSERT INTO riders (name, gender, date_of_birth, age_competition_day, club) VALUES (? , ? , ? , ? , ?) """
         data = (
-            None,
             df_riders["name"][row],
             df_riders["gender"][row],
             df_riders["date_of_birth"][row].strftime("%Y-%m-%d"),
@@ -73,26 +91,39 @@ club VARCHAR(50));"""
             df_riders["club"][row],
         )
         cursor.execute(sql_insert, data)
-        connection.commit()
+        id_rider = cursor.lastrowid
+        print('ID rider:', id_rider)
+    connection.commit()
+    connection.close()
 
 
 def create_database_routines(registration: pd.DataFrame):
-    # create_database_routines
-    connection_routines = sqlite3.connect("../data/routines.db")
+    """
+    create the databases routines.db and riders_routines.db
+    Keyword arguments:
+        registration: dataframe with registration data
+    """
+
+    # connect to database routines
+    connection_routines = sqlite3.connect("../../data/routines.db")
     cursor_routines = connection_routines.cursor()
+
+    # create new database routines
     cursor_routines.execute("DROP TABLE IF EXISTS routines")
     sql_create = """
     CREATE TABLE routines (
-    id_routine INTEGER PRIMARY KEY,
+    id_routine INTEGER PRIMARY KEY AUTOINCREMENT,
     routine_name VARCHAR(50),
     category VARCHAR(20),
     age_group VARCHAR(20));"""
     cursor_routines.execute(sql_create)
     connection_routines.commit()
 
-    # create_database_riders_routines
-    connection_riders_routines = sqlite3.connect("../data/riders_routines.db")
+    # connect to database riders_routines
+    connection_riders_routines = sqlite3.connect("../../data/riders_routines.db")
     cursor_riders_routines = connection_riders_routines.cursor()
+
+    # create new database riders_routines
     cursor_riders_routines.execute("DROP TABLE IF EXISTS riders_routines")
     sql_create = """
         CREATE TABLE riders_routines (
@@ -102,18 +133,14 @@ def create_database_routines(registration: pd.DataFrame):
     cursor_riders_routines.execute(sql_create)
     connection_riders_routines.commit()
 
-    connection_riders = sqlite3.connect("../data/riders.db")
+    # connect to database riders
+    connection_riders = sqlite3.connect("../../data/riders.db")
     cursor_riders = connection_riders.cursor()
 
-    sql_select_max_id = """SELECT MAX(id_routine) FROM routines"""
-    id_routine = cursor_routines.execute(sql_select_max_id).fetchone()[0]
-    print(id_routine)
-    if id_routine == None:
-        id_routine = 0
 
     for category in CATEGORIES:
         for age_group in set(registration["age_group_" + str(category)].dropna()): #age groups in this category
-            # print(category, age_group)
+            print(category, age_group)
             # print(registration[str("age_group_" + category)])
             for routine_name in set(
                 (
@@ -124,19 +151,18 @@ def create_database_routines(registration: pd.DataFrame):
             ):
                 if routine_name.isspace():
                     continue
-                id_routine += 1
-                # print(routine_name)
 
-                sql_insert = """INSERT INTO routines (id_routine, routine_name, category, age_group) VALUES (?, ? , ? , ? ) """
+                sql_insert = """INSERT INTO routines (routine_name, category, age_group) VALUES (? , ? , ? )  RETURNING id_routine"""
                 data = (
-                    id_routine,
                     routine_name,
                     category,
                     age_group,
                 )
-                print(id_routine, routine_name)
+
                 cursor_routines.execute(sql_insert, data)
-                connection_routines.commit()
+                connection_riders.commit()
+                id_routine = cursor_routines.lastrowid
+                print(id_routine, routine_name)
 
                 name_riders = (
                     registration["name"]
@@ -161,15 +187,26 @@ def create_database_routines(registration: pd.DataFrame):
                         id_routine,
                     )
                     cursor_riders_routines.execute(sql_insert, data)
-                    connection_riders_routines.commit()
+
+    connection_riders_routines.commit()
+    connection_riders_routines.close()
+    connection_routines.close()
+    connection_riders.close()
 
 
-registration = read_registration_file(
-    path="../data/Anmeldung_Landesmeisterschaft_2025.xlsx", club="BW96_Schenefeld"
-)
+def main():
+    unicycle_score_board_path = Path(Path.cwd().parent.parent)
+    registration = read_registration_file(
+        path=Path(unicycle_score_board_path, "data/Anmeldung_Landesmeisterschaft_2025.xlsx"), club="BW96 Schenefeld"
+    )
+    create_database_riders(registration)
+
+    create_database_routines(registration)
+
+
+if __name__ == "__main__":
+    main()
 
 # print(registration)
-create_database_riders(registration)
 
-create_database_routines(registration)
 
