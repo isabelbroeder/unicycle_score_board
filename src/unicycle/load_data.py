@@ -52,6 +52,6 @@ class DataLoader:
             conn = sqlite3.connect(self.db_path)
             df.to_sql(self.table_name, conn, if_exists="replace", index=False)
             conn.close()
-            print(f"✅ {self.table_name} aktualisiert.")
+            print(f"✅ {self.table_name} updated successfully.")
         except Exception as e:
-            print(f"❌ Fehler beim Schreiben in {self.table_name}: {e}")
+            print(f"❌ Error writing to {self.table_name}: {e}")
