@@ -22,7 +22,7 @@ ROUTINE_DATA = ["routine_name", "category", "age_group"]
 # constants
 script_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(script_dir, 'config.json')
-unicycle_score_board_path = Path(Path.cwd().parent.parent)
+unicycle_score_board_path = Path(script_dir).parent.parent
 with open(config_path, "r") as f:
     CONFIG = json.load(f)
 
