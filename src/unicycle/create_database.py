@@ -3,9 +3,12 @@ import sqlite3
 
 import pandas
 import pandas as pd
+import os
 
 from functions import calculate_age
 from pathlib import Path
+
+from src.unicycle.load_data import DataLoader
 
 WETTKAMPFTAG = datetime.datetime(2025, 5, 1, 0, 0)
 CATEGORIES = ["individual", "pair", "small_group", "large_group"]
@@ -193,20 +196,43 @@ def create_database_routines(registration: pd.DataFrame):
     connection_routines.close()
     connection_riders.close()
 
+def split_individual_male_female():
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    unicycle_score_board_path = Path(script_dir).parent.parent
+
+    dataloader_routines = DataLoader(Path(unicycle_score_board_path, "data/routines.db"), "routines")
+    df_routines = dataloader_routines.get_data("""SELECT id_routine, category FROM routines WHERE category == 'individual'""")
+    df_riders = DataLoader(Path(unicycle_score_board_path, "data/riders.db"), "riders").get_data("""SELECT id_rider, gender FROM riders""")
+    df_riders_routines = DataLoader(Path(unicycle_score_board_path, "data/riders_routines.db"), "riders_routines").get_data()
+
+    df_individual = df_riders_routines.merge(df_riders, on = 'id_rider', how = "left").merge(df_routines, on = "id_routine", how = "right")
+    df_individual["category"] = df_individual["category"].where(df_individual["gender"] != "m", "individual male")
+    df_individual["category"] = df_individual["category"].where(df_individual["gender"] != "w", "individual female")
+
+    dataloader_routines.update_multiple_rows(df_individual, ["id_routine"], ["category"])
+
+
+
+
+
+
+
 
 def main():
-    unicycle_score_board_path = Path(Path.cwd().parent.parent)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    unicycle_score_board_path = Path(script_dir).parent.parent
     registration = read_registration_file(
         path=Path(unicycle_score_board_path, "data/Anmeldung_Landesmeisterschaft_2025.xlsx"), club="BW96 Schenefeld"
     )
     create_database_riders(registration)
 
     create_database_routines(registration)
+    split_individual_male_female()
+
 
 
 if __name__ == "__main__":
     main()
 
-# print(registration)
 
 
