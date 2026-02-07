@@ -4,6 +4,10 @@ import sqlite3
 import pandas
 import pandas as pd
 import os
+import re
+
+from pandas import DataFrame
+from unicodedata import category
 
 from functions import calculate_age
 from pathlib import Path
@@ -213,6 +217,46 @@ def split_individual_male_female():
 
 
 
+def check_age_groups(age_groups:dict):
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    unicycle_score_board_path = Path(script_dir).parent.parent
+
+    dataloader_routines = DataLoader(Path(unicycle_score_board_path, "data/routines.db"), "routines")
+    df_routines = dataloader_routines.get_data(
+        """SELECT id_routine, category, age_group FROM routines""")
+    df_riders = DataLoader(Path(unicycle_score_board_path, "data/riders.db"), "riders").get_data(
+        """SELECT id_rider, age_competition_day FROM riders""")
+    df_riders_routines = DataLoader(Path(unicycle_score_board_path, "data/riders_routines.db"),
+                                    "riders_routines").get_data()
+    df = df_riders_routines.merge(df_riders, on = 'id_rider', how = "left").merge(df_routines, on = "id_routine", how = "right")
+
+    df_max = df.groupby(["id_routine"]).max()
+    df_update_age_groups = DataFrame(columns = ["id_routine", "age_group"])
+
+    for row in range(df_routines.shape[0]):
+        age_group_routine = set_age_group(df_max["age_competition_day"].iloc[row],
+                                          age_groups[df_max["category"].iloc[row]])
+        if age_group_routine != df_max["age_group"].iloc[row]:
+            new_row = pd.DataFrame({'id_routine': df_max.index[row], 'age_group': age_group_routine},
+                                   index=[0])
+            df_update_age_groups = pd.concat([new_row, df_update_age_groups.loc[:]]).reset_index(drop=True)
+            print("WARNING: the age group of routine", df_max.index[row], " was corrected from " , df_max["age_group"].iloc[row], " to ", age_group_routine)
+
+
+    if not df_update_age_groups.empty:
+        dataloader_routines.update_multiple_rows(df_update_age_groups, ["id_routine"], ["age_group"])
+
+
+def set_age_group(age: int, age_groups: list) -> str:
+    age_group_routine = age_groups[0]
+    for age_group in age_groups:
+        if age_group[0] == "U" and int(age_group[1:]) > age:
+            age_group_routine = age_group
+        elif age_group[-1] == "+" and int(age_group[:-1]) < age:
+            age_group_routine = age_group
+    return age_group_routine
+
 
 
 
@@ -228,6 +272,12 @@ def main():
 
     create_database_routines(registration)
     split_individual_male_female()
+    age_groups = {"individual male": ["U15", "15+"],
+                  "individual female": ["U23", "23+"],
+                  "pair": ["U15", "15+"],
+                  "small_group": ["U21", "21+"],
+                  "large_group": ["U15", "15+"]}
+    check_age_groups(age_groups)
 
 
 
