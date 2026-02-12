@@ -33,7 +33,7 @@ P_COLS = [f"P{i}_{s}" for i in range(1, 5) for s in TECH_SUBS]
 D_COLS = ["D1", "D2", "D3", "D4"]
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-config_path = os.path.join(script_dir, 'config.json')
+config_path = os.path.join(script_dir, "config.json")
 unicycle_score_board_path = Path(script_dir).parent.parent
 with open(config_path, "r") as f:
     CONFIG = json.load(f)
@@ -191,8 +191,12 @@ class Dashboard:
         ordered_cols = base_cols + T_COLS + P_COLS + D_COLS + ["Gesamtpunkte"]
 
         if jury_mode:
-            df_routines = DataLoader(Path(unicycle_score_board_path, "data/routines.db"), "routines").get_data()
-            df_points = DataLoader(Path(unicycle_score_board_path, "data/points.db"), "points").get_data()
+            df_routines = DataLoader(
+                Path(unicycle_score_board_path, "data/routines.db"), "routines"
+            ).get_data()
+            df_points = DataLoader(
+                Path(unicycle_score_board_path, "data/points.db"), "points"
+            ).get_data()
 
             if df_points.empty:
                 df_points = pd.DataFrame(columns=BASE_COLS_JURY)
@@ -407,22 +411,40 @@ class Dashboard:
             }
 
             if jury_mode:
-                df_routines = DataLoader(Path(unicycle_score_board_path, "data/routines.db"), "routines").get_data()
+                df_routines = DataLoader(
+                    Path(unicycle_score_board_path, "data/routines.db"), "routines"
+                ).get_data()
                 title = "⚖️ Jury Übersicht"
                 button_text = "👥 Wechsel zu Teilnehmer Ansicht"
                 table = self._datatable(
                     df_routines, theme, editable=True, jury_mode=True
                 )
             else:
-                df_riders = DataLoader(Path(unicycle_score_board_path, "data/riders.db"), "riders").get_data(sql_query="SELECT id_rider,name,club FROM riders")
-                df_routines = DataLoader(Path(unicycle_score_board_path, "data/routines.db"), "routines").get_data(sql_query="SELECT id_routine,routine_name,category,age_group FROM routines")
-                df_riders2routines = DataLoader(Path(unicycle_score_board_path, "data/riders_routines.db"), "riders_routines").get_data()
-                df_display = df_riders2routines.merge(df_riders, on='id_rider', how='left')
-                df_display = df_display.merge(df_routines, on='id_routine', how='left')
+                df_riders = DataLoader(
+                    Path(unicycle_score_board_path, "data/riders.db"), "riders"
+                ).get_data(sql_query="SELECT id_rider,name,club FROM riders")
+                df_routines = DataLoader(
+                    Path(unicycle_score_board_path, "data/routines.db"), "routines"
+                ).get_data(
+                    sql_query="SELECT id_routine,routine_name,category,age_group FROM routines"
+                )
+                df_riders2routines = DataLoader(
+                    Path(unicycle_score_board_path, "data/riders_routines.db"),
+                    "riders_routines",
+                ).get_data()
+                df_display = df_riders2routines.merge(
+                    df_riders, on="id_rider", how="left"
+                )
+                df_display = df_display.merge(df_routines, on="id_routine", how="left")
                 df_display = (
-                    df_display.groupby(["routine_name"], as_index=False)
-                      .agg(names=("name", lambda x: ", ".join(x))
-                )).merge(df_routines, on='routine_name', how='left').drop(columns="id_routine")
+                    (
+                        df_display.groupby(["routine_name"], as_index=False).agg(
+                            names=("name", lambda x: ", ".join(x))
+                        )
+                    )
+                    .merge(df_routines, on="routine_name", how="left")
+                    .drop(columns="id_routine")
+                )
                 title = "🏁 Teilnehmer Übersicht"
                 button_text = "⚖️ Wechsel zu Jury Ansicht"
                 table = self._datatable(
@@ -498,7 +520,9 @@ class Dashboard:
 
             # save to points.db
             try:
-                DataLoader(Path(unicycle_score_board_path, "data/points.db"), "points").update_data(df)
+                DataLoader(
+                    Path(unicycle_score_board_path, "data/points.db"), "points"
+                ).update_data(df)
             except Exception as e:
                 print("Error saving points:", e)
 

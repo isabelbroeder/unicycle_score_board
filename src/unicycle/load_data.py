@@ -13,7 +13,7 @@ class DataLoader:
         self.db_path = db_path
         self.table_name = table_name
 
-    def get_data(self, sql_query: str = None, par = None)-> pd.DataFrame:
+    def get_data(self, sql_query: str = None, par=None) -> pd.DataFrame:
         """
         Load data from a SQLite database into a pandas DataFrame.
 
@@ -39,13 +39,12 @@ class DataLoader:
             sql_query = f"SELECT * FROM {self.table_name}"
         try:
             conn = sqlite3.connect(self.db_path)
-            df = pd.read_sql_query(sql_query, con = conn, params = par)
+            df = pd.read_sql_query(sql_query, con=conn, params=par)
             conn.close()
             return df
         except Exception as e:
             print(f"❌ Failed to load data from {self.table_name}: {e}")
             return pd.DataFrame()
-
 
     def update_data(self, df: pd.DataFrame):
         try:
@@ -56,8 +55,9 @@ class DataLoader:
         except Exception as e:
             print(f"❌ Error writing to {self.table_name}: {e}")
 
-
-    def update_multiple_rows(self, df: pd.DataFrame, key_columns: list, update_columns: list):
+    def update_multiple_rows(
+        self, df: pd.DataFrame, key_columns: list, update_columns: list
+    ):
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
