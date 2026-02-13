@@ -8,16 +8,16 @@ import os
 from pandas import DataFrame
 
 
-from functions import calculate_age
+from src.unicycle.functions import calculate_age
 from pathlib import Path
 
 from src.unicycle.load_data import DataLoader
 
-DATE_COMPETITION = datetime.datetime(2025, 5, 1, 0, 0)
+DATE_COMPETITION = datetime.datetime(2026, 3, 7, 0, 0)
 CATEGORIES = ["individual", "pair", "small_group", "large_group"]
 
 
-def read_registration_file(path: str, club: str) -> pandas.DataFrame:
+def read_registration_file(path: Path, club: str) -> pandas.DataFrame:
     """
     Read the registration file
     Keyword arguments:
@@ -55,7 +55,8 @@ def read_registration_file(path: str, club: str) -> pandas.DataFrame:
     # Add club
     number_of_riders = registration["name"].size
     registration.insert(4, "club", [club] * number_of_riders)
-    return registration
+    registration_stripped = registration.map(lambda x: x.strip() if isinstance(x, str) else x)
+    return registration_stripped
 
 
 def create_database_riders(registration: pd.DataFrame):
@@ -66,15 +67,17 @@ def create_database_riders(registration: pd.DataFrame):
     """
 
     # connect to database
-    connection = sqlite3.connect("../../data/riders.db")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    unicycle_score_board_path = Path(script_dir).parent.parent
+    connection = sqlite3.connect(Path(unicycle_score_board_path, "data/riders.db"))
     cursor = connection.cursor()
     sqlite3.register_adapter(datetime.date, adapt_date_iso)
     sqlite3.register_converter("date", convert_date)
 
     # create new database
-    cursor.execute("DROP TABLE IF EXISTS riders")
+    #cursor.execute("DROP TABLE IF EXISTS riders")
     sql_create_table = """
-        CREATE TABLE riders (
+        CREATE TABLE IF NOT EXISTS riders (
         id_rider INTEGER PRIMARY KEY AUTOINCREMENT,
         name VARCHAR(50),
         gender CHAR(1),
@@ -110,13 +113,15 @@ def create_database_routines(registration: pd.DataFrame):
     """
 
     # connect to database routines
-    connection_routines = sqlite3.connect("../../data/routines.db")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    unicycle_score_board_path = Path(script_dir).parent.parent
+    connection_routines = sqlite3.connect(Path(unicycle_score_board_path, "data/routines.db"))
     cursor_routines = connection_routines.cursor()
 
     # create new database routines
-    cursor_routines.execute("DROP TABLE IF EXISTS routines")
+    #cursor_routines.execute("DROP TABLE IF EXISTS routines")
     sql_create = """
-    CREATE TABLE routines (
+    CREATE TABLE IF NOT EXISTS routines (
     id_routine INTEGER PRIMARY KEY AUTOINCREMENT,
     routine_name VARCHAR(50),
     category VARCHAR(20),
@@ -125,13 +130,13 @@ def create_database_routines(registration: pd.DataFrame):
     connection_routines.commit()
 
     # connect to database riders_routines
-    connection_riders_routines = sqlite3.connect("../../data/riders_routines.db")
+    connection_riders_routines = sqlite3.connect(Path(unicycle_score_board_path,"data/riders_routines.db"))
     cursor_riders_routines = connection_riders_routines.cursor()
 
     # create new database riders_routines
-    cursor_riders_routines.execute("DROP TABLE IF EXISTS riders_routines")
+    #cursor_riders_routines.execute("DROP TABLE IF EXISTS riders_routines")
     sql_create = """
-        CREATE TABLE riders_routines (
+        CREATE TABLE IF NOT EXISTS riders_routines (
         id_rider INTEGER,
         id_routine INTEGER,
         PRIMARY KEY (id_rider, id_routine));"""
@@ -139,7 +144,7 @@ def create_database_routines(registration: pd.DataFrame):
     connection_riders_routines.commit()
 
     # connect to database riders
-    connection_riders = sqlite3.connect("../../data/riders.db")
+    connection_riders = sqlite3.connect(Path(unicycle_score_board_path,"data/riders.db"))
     cursor_riders = connection_riders.cursor()
 
     for category in CATEGORIES:
@@ -249,6 +254,7 @@ def check_age_groups(age_groups: dict):
     )
 
     df_max = df.groupby(["id_routine"]).max()
+    print(df_max)
     df_update_age_groups = DataFrame(columns=["id_routine", "age_group"])
 
     for row in range(df_routines.shape[0]):
@@ -273,21 +279,25 @@ def check_age_groups(age_groups: dict):
                 age_group_routine,
             )
 
-    if df_update_age_groups.empty:
-        dataloader_routines.close()
-    else:
+    if not df_update_age_groups.empty:
         dataloader_routines.update_multiple_rows(
             df_update_age_groups, ["id_routine"], ["age_group"]
         )
 
 
 def set_age_group(age: int, age_groups: list) -> str:
+    """
+    assigns routine to the correct age group
+    age: age of the oldest rider in this routine
+    age_groups: age_groups in this category
+    """
     age_group_routine = age_groups[0]
     for age_group in age_groups:
         if age_group[0] == "U" and int(age_group[1:]) > age:
-            age_group_routine = age_group
-        elif age_group[-1] == "+" and int(age_group[:-1]) < age:
-            age_group_routine = age_group
+            #age_group_routine = age_group
+            return age_group
+        elif age_group[-1] == "+" and int(age_group[:-1]) <= age:
+            return age_group
     return age_group_routine
 
 
@@ -366,7 +376,7 @@ def replace_single_element(s):
 def format_names(s):
     if isinstance(s, set):
         if len(s) == 2:
-            return f"{next(iter(s))} und {next(iter(s))}"
+            return f"{s.pop()} und {s.pop()}"
         if len(s) > 2:
             return f"{len(s)} Fahrer/innen"
     else:
@@ -384,23 +394,31 @@ def convert_date(val):
 
 
 def main():
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
     unicycle_score_board_path = Path(script_dir).parent.parent
-    registration = read_registration_file(
-        path=Path(
-            unicycle_score_board_path, "data/Anmeldung_Landesmeisterschaft_2025.xlsx"
-        ),
-        club="BW96 Schenefeld",
-    )
-    create_database_riders(registration)
+    registration_files = DataFrame({"club": ["SV Schlumpfhausen", "TSV Lummerland", "SV Entenhausen"],"path": ["data/Anmeldung_Landesmeisterschaft_2025_Verein1.xlsx",
+                                    "data/Anmeldung_Landesmeisterschaft_2025_Verein2.xlsx",
+                                    "data/Anmeldung_Landesmeisterschaft_2025_Verein3.xlsx"]})
 
-    create_database_routines(registration)
+    for index, row in registration_files.iterrows():
+        registration = read_registration_file(
+            path=Path(
+                unicycle_score_board_path, row["path"]
+            ),
+            club= row["club"],
+        )
+        create_database_riders(registration)
+
+        create_database_routines(registration)
+
     split_individual_male_female()
+
     age_groups = {
-        "individual male": ["U15", "15+"],
-        "individual female": ["U23", "23+"],
-        "pair": ["U15", "15+"],
-        "small_group": ["U21", "21+"],
+        "individual male": ["U11", "U13","U15", "15+"],
+        "individual female": ["U11", "U13","U15", "15+"],
+        "pair": ["U11", "U13","U15", "15+"],
+        "small_group": ["U15", "15+"],
         "large_group": ["U15", "15+"],
     }
     check_age_groups(age_groups)
