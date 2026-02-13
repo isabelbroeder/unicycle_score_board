@@ -440,7 +440,7 @@ class Dashboard:
                     (
                         df_display.groupby(["routine_name"], as_index=False).agg(
                             names=("name", lambda x: ", ".join(x))
-                        )
+                        ) # problem bei gleichem Kürnamen
                     )
                     .merge(df_routines, on="routine_name", how="left")
                     .drop(columns="id_routine")
