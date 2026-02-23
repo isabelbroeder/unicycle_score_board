@@ -211,7 +211,7 @@ class Dashboard:
             # judges D3 and D4 are only judging groups
             def set_uneditable_judges(row):
                 cat = row["category"]
-                if cat in ["individual", "pair"]:
+                if cat in ["individual female", "individual male", "pair"]:
                     row["D3"] = row["D4"] = "–"
                 return row
 
