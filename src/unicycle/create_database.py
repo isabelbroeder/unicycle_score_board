@@ -1,5 +1,6 @@
 import datetime
 import sqlite3
+import string
 
 import pandas
 import pandas as pd
@@ -17,7 +18,7 @@ DATE_COMPETITION = datetime.datetime(2026, 3, 7, 0, 0)
 CATEGORIES = ["individual", "pair", "small_group", "large_group"]
 
 
-def read_registration_file(path: Path, club: str) -> pandas.DataFrame:
+def read_registration_file(path: Path) -> pandas.DataFrame:
     """
     Read the registration file
     Keyword arguments:
@@ -25,7 +26,7 @@ def read_registration_file(path: Path, club: str) -> pandas.DataFrame:
         club -- club whose registration file is read in
     return pandas.Dataframe with registration data
     """
-    # read registration file
+
     registration = pd.read_excel(path, sheet_name=1, skiprows=4)
     registration.columns = [
         "name",
@@ -49,12 +50,15 @@ def read_registration_file(path: Path, club: str) -> pandas.DataFrame:
     registration = registration[registration["name"].notna()]  # only rows with entries
     registration = registration.drop(columns="entry_fee")
     registration = registration.convert_dtypes()
-
     registration["date_of_birth"] = registration["date_of_birth"].dt.date
 
     # Add club
+    registration_overview = pd.read_excel(path, sheet_name=0, header=None)
+    cell = (7,"E") # Cell with club name
+    club = registration_overview.loc[cell[0]-1, list(string.ascii_uppercase).index(cell[1])]
     number_of_riders = registration["name"].size
     registration.insert(4, "club", [club] * number_of_riders)
+
     registration_stripped = registration.map(
         lambda x: x.strip() if isinstance(x, str) else x
     )
@@ -210,6 +214,9 @@ def create_database_routines(registration: pd.DataFrame):
 
 
 def split_individual_male_female():
+    """
+    split the category individual into individual female and individual male
+    """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     unicycle_score_board_path = Path(script_dir).parent.parent
 
@@ -242,6 +249,9 @@ def split_individual_male_female():
 
 
 def check_age_groups(age_groups: dict):
+    """
+    Checks wheather the age groups in the registration file are the same
+    """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     unicycle_score_board_path = Path(script_dir).parent.parent
 
@@ -406,22 +416,10 @@ def convert_date(val):
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     unicycle_score_board_path = Path(script_dir).parent.parent
-    registration_files = DataFrame(
-        {
-            "club": ["SV Schlumpfhausen", "TSV Lummerland", "SV Entenhausen"],
-            "path": [
-                "data/Anmeldung_Landesmeisterschaft_2025_Verein1.xlsx",
-                "data/Anmeldung_Landesmeisterschaft_2025_Verein2.xlsx",
-                "data/Anmeldung_Landesmeisterschaft_2025_Verein3.xlsx",
-            ],
-        }
-    )
 
-    for index, row in registration_files.iterrows():
-        registration = read_registration_file(
-            path=Path(unicycle_score_board_path, row["path"]),
-            club=row["club"],
-        )
+    registration_files =  Path(unicycle_score_board_path, "data/registration_files").rglob('*.xlsx')
+    for file in registration_files:
+        registration = read_registration_file(path=Path(unicycle_score_board_path, file))
         create_database_riders(registration)
 
         create_database_routines(registration)
@@ -429,10 +427,10 @@ def main():
     split_individual_male_female()
 
     age_groups = {
-        "individual male": ["U9", "U11", "U13", "U15", "U30", "30+"],
-        "individual female": ["U9","U11", "U12", "U13", "U15", "U17", "U30", "30+"],
-        "pair": ["U9","U11", "U12", "U13", "U15", "U30", "30+"],
-        "small_group": ["U11", "U13","U15", "15+"],
+        "individual male": ["U9", "U11", "U13", "U15", "15+"],
+        "individual female": ["U9","U11", "U13", "U15", "15+"],
+        "pair": ["U9","U11", "U13", "U15", "15+"],
+        "small_group": ["U15", "15+"],
         "large_group": ["U12", "12+"],
     }
     check_age_groups(age_groups)
