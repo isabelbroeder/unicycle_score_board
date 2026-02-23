@@ -36,7 +36,7 @@ oder führen Sie die Datei in einer Python-Entwicklungsumgebung Ihrer Wahl aus [
 
 2. Nach dem Ausführen erscheint in der Konsole ein Link. Klicken Sie auf diesen Link, um das Dashboard zu öffnen.
 
-    <img src="images/console-link.png" width="500" alt="">
+    <img src="images/console-link.png" width="1810" alt="">
 
 
 3. Das Dashboard öffnet sich standardmäßig mit der Teilnehmerübersicht.
@@ -49,7 +49,7 @@ oder führen Sie die Datei in einer Python-Entwicklungsumgebung Ihrer Wahl aus [
 
 5. Klicken Sie oben rechts auf die Schaltfläche „Jury Ansicht“. Geben Sie das Passwort im Popup-Fenster ein.
 
-    <img src="images/password.png" width="200" alt="">
+    <img src="images/password.png" width="300" alt="">
 
 
 6. In der Juryansicht können Sie Punkte für jede Kür eingeben. Die Gesamtpunktzahl wird automatisch berechnet.

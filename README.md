@@ -37,7 +37,7 @@ or by running it in a python interpreter of your choice [preferably PyCharm ;)].
 
 2. A link will appear in the console. Click on the link to access the dashboard.
 
-    <img src="images/console-link.png" width="500" alt="">
+    <img src="images/console-link.png" width="1810" alt="">
 
 
 3. The dashboard opens with the participant overview as the default page.
@@ -50,7 +50,7 @@ or by running it in a python interpreter of your choice [preferably PyCharm ;)].
 
 5. Click the "Jury Ansicht" button in the top right corner. Enter the password in the popup window.
 
-    <img src="images/password.png" width="200" alt="">
+    <img src="images/password.png" width="300" alt="">
 
 
 6. In the jury view, you can enter scores for each routine. Total scores are calculated automatically.
