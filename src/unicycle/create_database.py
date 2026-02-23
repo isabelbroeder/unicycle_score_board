@@ -339,9 +339,11 @@ def create_starting_order(age_groups):
             "large_group",
         ],
     )
+    df = df.sample(frac=1)
     df = df.sort_values(["category", "age_group"], ascending=[True, False])
     df["name"] = df["name"].apply(lambda x: format_names(x))
     df = df[["routine_name", "name", "club", "category", "age_group"]]
+
 
     with pd.ExcelWriter("output.xlsx", engine="openpyxl") as writer:
         # df.to_excel(writer, index=False, startrow=1, startcol=0)
@@ -427,11 +429,11 @@ def main():
     split_individual_male_female()
 
     age_groups = {
-        "individual male": ["U11", "U13", "U15", "15+"],
-        "individual female": ["U11", "U13", "U15", "15+"],
-        "pair": ["U11", "U13", "U15", "15+"],
-        "small_group": ["U15", "15+"],
-        "large_group": ["U15", "15+"],
+        "individual male": ["U9", "U11", "U13", "U15", "U30", "30+"],
+        "individual female": ["U9","U11", "U12", "U13", "U15", "U17", "U30", "30+"],
+        "pair": ["U9","U11", "U12", "U13", "U15", "U30", "30+"],
+        "small_group": ["U11", "U13","U15", "15+"],
+        "large_group": ["U12", "12+"],
     }
     check_age_groups(age_groups)
     create_starting_order(age_groups)
