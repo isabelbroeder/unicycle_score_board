@@ -1,6 +1,6 @@
 """creates dashboard from data in database"""
 
-# %% import packages
+# %% import packages # remove, it is a nice feature during development, but once a function is written, it can be removed :)
 from dash import Dash, dash_table, html, Input, Output, State, dcc
 import bcrypt
 import dash
@@ -32,6 +32,7 @@ P_COLS = [f"P{i}_{s}" for i in range(1, 5) for s in TECH_SUBS]
 
 D_COLS = ["D1", "D2", "D3", "D4"]
 
+# the following lines should not be executed on module level as it is doing IO operations (reading a file) which happens when ever this module is loaded, not even if something is run. Therefore, please move it in a function
 script_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(script_dir, 'config.json')
 unicycle_score_board_path = Path(Path.cwd().parent.parent)

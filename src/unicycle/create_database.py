@@ -7,8 +7,8 @@ import pandas as pd
 from functions import calculate_age
 from pathlib import Path
 
-WETTKAMPFTAG = datetime.datetime(2025, 5, 1, 0, 0)
-CATEGORIES = ["individual", "pair", "small_group", "large_group"]
+WETTKAMPFTAG = datetime.datetime(2025, 5, 1, 0, 0)  # Stay in english in code. This avoids mixing up languages which is hard for every reader coming from either language
+CATEGORIES = ["individual", "pair", "small_group", "large_group"]  # maybe
 
 
 def read_registration_file(path: str, club: str) -> pandas.DataFrame:
@@ -19,7 +19,9 @@ def read_registration_file(path: str, club: str) -> pandas.DataFrame:
         club -- club whose registration file is read in
     return pandas.Dataframe with registration data
     """
-    # read registration file
+    # Nice docstring. There a dedicated styles for it maybe checkout "restructured Text" or "Numpy". You can even set this up in PyCharm
+
+    # read registration file  # unnecessary comment, the function name is sufficient. Keep comments as minimal as possible
     registration = pd.read_excel(path, sheet_name=1, skiprows=4)
     registration.columns = [
         "name",
@@ -139,7 +141,7 @@ def create_database_routines(registration: pd.DataFrame):
 
 
     for category in CATEGORIES:
-        for age_group in set(registration["age_group_" + str(category)].dropna()): #age groups in this category
+        for age_group in set(registration[f"age_group_{category}"].dropna()): #age groups in this category  # unnecessary comment, please remove
             print(category, age_group)
             # print(registration[str("age_group_" + category)])
             for routine_name in set(
