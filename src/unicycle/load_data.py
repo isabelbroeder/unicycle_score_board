@@ -1,15 +1,15 @@
-"""data loading class that is used by app.py"""
+"""Data loading class that is used by app.py."""
 
-# %% import packages
+# %% import packages # remove, it is a nice feature during development, but once a function is written, it can be removed :)
 import pandas as pd
 import sqlite3
 
 
-# %%
+# %% # remove, it is a nice feature during development, but once a function is written, it can be removed :)
 class DataLoader:
     """Handles reading and writing data from SQLite databases."""
 
-    def __init__(self, db_path, table_name):
+    def __init__(self, db_path, table_name):  # typing
         self.db_path = db_path
         self.table_name = table_name
 
@@ -37,6 +37,7 @@ class DataLoader:
 
         if sql_query == None:
             sql_query = f"SELECT * FROM {self.table_name}"
+        conn = None
         try:
             conn = sqlite3.connect(self.db_path)
             df = pd.read_sql_query(sql_query, con = conn, params = par)
@@ -45,13 +46,20 @@ class DataLoader:
         except Exception as e:
             print(f"❌ Failed to load data from {self.table_name}: {e}")
             return pd.DataFrame()
+        finally:  # ensures that even on an error the connection is closed
+            if conn is not None:
+                conn.close()
 
 
     def update_data(self, df: pd.DataFrame):
+        """Docstring."""
+        conn = None
         try:
             conn = sqlite3.connect(self.db_path)
             df.to_sql(self.table_name, conn, if_exists="replace", index=False)
-            conn.close()
             print(f"✅ {self.table_name} updated successfully.")
         except Exception as e:
             print(f"❌ Error writing to {self.table_name}: {e}")
+        finally:  # ensures that even on an error the connection is closed
+            if conn is not None:
+                conn.close()

@@ -2,7 +2,7 @@
 
 
 import datetime
-import sqlite3
+import sqlite3  # unused-> remove
 
 import pandas as pd
 
@@ -23,9 +23,10 @@ def calculate_age(date_of_birth: datetime, date: datetime) -> int:
 
 
 def calculate_results(category: str, age_group: str) -> pd.DataFrame:
-    #df_routines = DataLoader("../data/routines.db", "routines").get_data()
+    #df_routines = DataLoader("../data/routines.db", "routines").get_data()  # unused -> remove
     df_points = DataLoader("../../data/points.db", "points").get_data("SELECT *' FROM points WHERE age_group = ? AND category = ?", [age_group, category])
 
+    # following unused -> remove
     #connection_points = sqlite3.connect("../data/points.db")
     #cursor_points = connection_points.cursor()
     #df_points = cursor_points.execute(

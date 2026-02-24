@@ -1,6 +1,6 @@
 """creates dashboard from data in database"""
 
-# %% import packages
+# %% import packages # remove, it is a nice feature during development, but once a function is written, it can be removed :)
 from dash import Dash, dash_table, html, Input, Output, State, dcc
 import bcrypt
 import dash
@@ -15,7 +15,7 @@ from pathlib import Path
 
 from load_data import DataLoader
 
-# constants
+# constants  # obvious comment -> remove
 BASE_COLS_PARTICIPANT = ["routine_name", "names", "age_group", "category"]
 BASE_COLS_JURY = ["routine_name", "age_group", "category"]
 
@@ -32,6 +32,7 @@ P_COLS = [f"P{i}_{s}" for i in range(1, 5) for s in TECH_SUBS]
 
 D_COLS = ["D1", "D2", "D3", "D4"]
 
+# the following lines should not be executed on module level as it is doing IO operations (reading a file) which happens when ever this module is loaded, not even if something is run. Therefore, please move it in a function
 script_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(script_dir, 'config.json')
 unicycle_score_board_path = Path(Path.cwd().parent.parent)
@@ -42,7 +43,10 @@ STORED_HASH: object = CONFIG["jury_password_hash"].encode()
 
 
 class Dashboard:
+    """Docstring."""
+
     def __init__(self):
+        """Docstring."""
         self.app = Dash(
             __name__,
             title="Fahrerinnen & Jury Dashboard",
@@ -76,6 +80,7 @@ class Dashboard:
 
     # ----------------- UI -----------------
     def _build_layout(self):
+        """Docstring."""
         return html.Div(
             id="page-container",
             style={
@@ -179,6 +184,7 @@ class Dashboard:
         )
 
     def _datatable(self, df: pd.DataFrame, theme, editable=False, jury_mode=False):
+        """Docstring."""
         if df.empty:
             return html.Div(
                 "❌ Keine Daten geladen.",
@@ -330,7 +336,7 @@ class Dashboard:
 
     # ----------------- Callbacks -----------------
     def _register_callbacks(self):
-        # --- Password modal open/close ---
+        """Docstring."""
         @self.app.callback(
             Output("password-modal", "is_open"),
             Output("password-error", "children"),
@@ -393,6 +399,7 @@ class Dashboard:
             prevent_initial_call=False,
         )
         def update_dashboard(is_dark, jury_access):
+            """Docstring."""
             theme = self.DARK_THEME if is_dark else self.LIGHT_THEME
             icon = "🌙" if is_dark else "🌞"
             jury_mode = jury_access
@@ -437,7 +444,8 @@ class Dashboard:
             State("data-table", "data"),
             prevent_initial_call=True,
         )
-        def update_points(rows, current_state):
+        def update_points(rows, current_state):  # typing
+            """Docstring."""
             # rows: new data submitted from the DataTable
             # current_state: previous state (not used, kept for signature compatibility)
             if not rows:
@@ -445,47 +453,49 @@ class Dashboard:
 
             df = pd.DataFrame(rows)
 
-            # Ensure columns exist
+            # Ensure columns exist  # obvious comment-> remove
             for col in SCORE_COLS:
                 if col not in df.columns:
                     df[col] = np.nan
 
             # clamp judge values between 0 and 10 (D3 and D4 between 0 and 999)
-            def clamp_cell(value, category, colname):
-                if colname in ["D3", "D4"] and category in ["individual", "pair"]:
-                    return "–"
-                if value == "–":
-                    return "–"
+            def clamp_cell(value, category, colname):  # typing
+                """Docstring."""
+                # This function is quite big and does alot of things. Please split this up. A good strategy wood be separate all the blocks, where you wrote a comment above it...
+                if colname in ["D3", "D4"] and category in ["individual", "pair"]: # magic value -> constant/import
+                    return "–" # magic value -> constant/import
+                if value == "–": # magic value -> constant/import
+                    return "–" # magic value -> constant/import
                 try:
                     v = float(value)
                 except Exception:
                     return np.nan
-                if v < 0:
+                if v < 0: # magic value -> constant/import
                     return np.nan
                 if colname in D_COLS:
-                    if v > 999 or not v.is_integer():
+                    if v > 999 or not v.is_integer(): # magic value -> constant/import
                         return np.nan
                     return int(v)
                 else:
-                    if v > 10:
+                    if v > 10: # magic value -> constant/import
                         return np.nan
                 return v
 
-            # Apply clamping per-row and per-scoring column
-            if "category" not in df.columns:
-                df["category"] = None
+            # Apply clamping per-row and per-scoring column  # obvious comment-> remove
+            if "category" not in df.columns: # magic value -> constant/import
+                df["category"] = None # magic value -> constant/import
 
             for col in SCORE_COLS:
                 df[col] = df.apply(
-                    lambda r: clamp_cell(r.get(col), r.get("category"), col), axis=1
+                    lambda r: clamp_cell(r.get(col), r.get("category"), col), axis=1 # magic value -> constant/import
                 )
 
-            # recompute total
+            # recompute total  # obvious comment-> remove
             def compute_total(row):
                 total = 0
                 for col in SCORE_COLS:
                     val = row.get(col)
-                    if val == "–" or pd.isna(val):
+                    if val == "–" or pd.isna(val): # magic value -> constant/import
                         total += 0
                     else:
                         try:
@@ -494,9 +504,9 @@ class Dashboard:
                             total += 0
                 return total
 
-            df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
+            df["Gesamtpunkte"] = df.apply(compute_total, axis=1) # magic value -> constant/import
 
-            # save to points.db
+            # save to points.db  # obvious comment-> remove
             try:
                 DataLoader(Path(unicycle_score_board_path, "data/points.db"), "points").update_data(df)
             except Exception as e:
