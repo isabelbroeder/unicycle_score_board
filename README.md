@@ -82,7 +82,7 @@ We strongly suggest to use a python interpreter (preferably PyCharm, because the
 
 ## Further Ideas
 
-If there would have been more time the following ideas could have been implemented as well
+With more time, the following ideas could have been considered as well:
 
 - Show participants points along with a ranking on the participant page.
 - Allow selecting specific judges for scoring or review with individual passwords.

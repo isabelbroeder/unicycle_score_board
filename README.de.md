@@ -76,14 +76,16 @@ Wir empfehlen dringend, einen Python-Interpreter zu verwenden (vorzugsweise PyCh
 
 - Jede Kür wird von einer Jury bewertet, die aus mehreren Wertungsrichter:innen besteht.
 - Vier Wertungsrichter:innen für Technik und Performance
-- Einzel- und Paarküren haben zwei Abgangszähler:innen, Klein- und Großgruppen vier
+- Einzel- und Paarküren haben zwei Abstiegszähler:innen, Klein- und Großgruppen vier
 - Die Wertungsrichter:innen werden fortlaufend nummeriert: T1, T2, …, P1, P2, …, D1, D2, …
 - Technik- und Performance-Wertungsrichter:innen können in drei Kategorien jeweils 0 bis 10 Punkte vergeben (mit beliebig vielen Dezimalstellen, üblicherweise ein oder zwei)
-- Technik-Kategorien: Anzahl der Einrad-Elemente und Übergänge, Beherrschung und Qualität der Ausführung, Schwierigkeit und Dauer
-- Performance-Kategorien: Präsenz/Ausführung, Komposition/Choreografie, Interpretation der Musik/Timing
-- Bei Abgängen wird zwischen kleinen und großen Abgängen unterschieden
+  - Technik-Kategorien: Anzahl der Einrad-Elemente und Übergänge, Beherrschung und Qualität der Ausführung, Schwierigkeit und Dauer
+  - Performance-Kategorien: Präsenz/Ausführung, Komposition/Choreografie, Interpretation der Musik/Timing
+- Bei Abstiegen wird zwischen kleinen und großen Abstiegen unterschieden
 
 ## Weiterführende Ideen
+
+Mit mehr Zeit hätten die folgenden Ideen ebenfalls berücksichtigt werden können:
 
 - Punkte der Teilnehmenden auf der Teilnehmerseite zusammen mit einer Rangliste anzeigen.  
 - Auswahl bestimmter Jurymitglieder für Bewertung oder Übersicht ermöglichen, jeweils mit individuellem Passwort.
