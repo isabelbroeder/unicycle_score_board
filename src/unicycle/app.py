@@ -1,6 +1,5 @@
 """creates dashboard from data in database"""
 
-# %% import packages
 from dash import Dash, dash_table, html, Input, Output, State, dcc
 import bcrypt
 import dash
@@ -11,11 +10,8 @@ import numpy as np
 import os
 import pandas as pd
 from pathlib import Path
-
-
 from load_data import DataLoader
 
-# constants
 BASE_COLS_PARTICIPANT = ["routine_name", "names", "age_group", "category"]
 BASE_COLS_JURY = ["routine_name", "age_group", "category"]
 
@@ -42,7 +38,14 @@ STORED_HASH: object = CONFIG["jury_password_hash"].encode()
 
 
 class Dashboard:
+    """Main application class for the unicycle scoring dashboard.
+
+    This class combines the Dash app instance, layout creation,
+    callbacks, theming, and execution logic. It provides both participant
+    and jury views with optional editing and password-protected access.
+    """
     def __init__(self):
+        """Initialize the Dash app, themes, layout, and callbacks."""
         self.app = Dash(
             __name__,
             title="Fahrerinnen & Jury Dashboard",
@@ -76,6 +79,11 @@ class Dashboard:
 
     # ----------------- UI -----------------
     def _build_layout(self):
+        """Construct and return the root Dash layout container.
+
+        :return: Root page container containing theme toggle, view switch,
+        password modal, title, and table placeholder.
+        """
         return html.Div(
             id="page-container",
             style={
@@ -140,7 +148,12 @@ class Dashboard:
                                     type="password",
                                     placeholder="Passwort",
                                     n_submit=0,
-                                    style={"width": "100%", "padding": "8px"},
+                                    style={
+                                        "width": "100%",
+                                        "padding": "8px",
+                                        "color": "black",
+                                        "backgroundColor": "white",
+                                    },
                                 ),
                                 html.Div(
                                     id="password-error",
@@ -179,6 +192,15 @@ class Dashboard:
         )
 
     def _datatable(self, df: pd.DataFrame, theme, editable=False, jury_mode=False):
+        """Create a Dash DataTable configured for participant or jury mode.
+
+        :param pd.DataFrame df: Source dataframe to display.
+        :param dict theme: Theme color dictionary (light or dark).
+        :param bool editable: Whether table cells are editable.
+        :param bool jury_mode: Whether jury mode is active.
+        :return dash_table.DataTable | html.Div: Configured DataTable or
+            message if no data available.
+        """
         if df.empty:
             return html.Div(
                 "❌ Keine Daten geladen.",
@@ -210,6 +232,11 @@ class Dashboard:
 
             # judges D3 and D4 are only judging groups
             def set_uneditable_judges(row):
+                """Disable D3 and D4 scoring for non-group categories.
+
+                :param pd.Series row: Routine dataframe row.
+                :return pd.Series: Modified row with D3/D4 replaced by '–'.
+                """
                 cat = row["category"]
                 if cat in ["individual female", "individual male", "pair"]:
                     row["D3"] = row["D4"] = "–"
@@ -218,7 +245,12 @@ class Dashboard:
             df = df.apply(set_uneditable_judges, axis=1)
 
             # calculation of all points per row ("–" = 0)
-            def compute_total(row):
+            def compute_total(row: pd.Series) -> float:
+                """Compute total score across all judge columns.
+
+                :param pd.Series row: Scoring dataframe row.
+                :return float: Sum of all valid numeric score values.
+                """
                 total = 0
 
                 for col in TP_SUBCOLS:
@@ -334,7 +366,7 @@ class Dashboard:
 
     # ----------------- Callbacks -----------------
     def _register_callbacks(self):
-        # --- Password modal open/close ---
+        """Register all Dash callbacks for UI interactivity and persistence."""
         @self.app.callback(
             Output("password-modal", "is_open"),
             Output("password-error", "children"),
@@ -358,6 +390,18 @@ class Dashboard:
             password,
             has_access,
         ):
+            """Handle opening, closing, and validating the jury password modal.
+
+            :param int open_clicks: Click count of the view switch button.
+            :param int submit_clicks: Click count of the submit password button.
+            :param int enter_submit: Submit events from password input.
+            :param int cancel_clicks: Click count of cancel button.
+            :param bool is_open: Current modal open state.
+            :param str password: Entered password value.
+            :param bool has_access: Whether jury access is already granted.
+            :return tuple[bool, str, str, bool]: Updated modal state, error message,
+                cleared input, and access flag.
+            """
             ctx = dash.callback_context
             if not ctx.triggered:
                 raise dash.exceptions.PreventUpdate
@@ -367,7 +411,7 @@ class Dashboard:
 
             if button_id == "view-switch-btn":
                 if has_access:
-                    # if jury mode activ -> switch back
+                    # if jury mode active -> switch back
                     return False, "", "", False
                 else:
                     # if jury mode is about to be activated -> ask for password
@@ -397,6 +441,13 @@ class Dashboard:
             prevent_initial_call=False,
         )
         def update_dashboard(is_dark, jury_access):
+            """Update theme, view mode, titles, and table content.
+
+            :param bool is_dark: Whether dark theme is enabled.
+            :param bool jury_access: Whether jury mode is active.
+            :return tuple[dict, object, str, str, str]: Updated page style,
+                table component, title text, switch button text, and theme icon.
+            """
             theme = self.DARK_THEME if is_dark else self.LIGHT_THEME
             icon = "🌙" if is_dark else "🌞"
             jury_mode = jury_access
@@ -460,14 +511,17 @@ class Dashboard:
             prevent_initial_call=True,
         )
         def update_points(rows, current_state):
-            # rows: new data submitted from the DataTable
-            # current_state: previous state (not used, kept for signature compatibility)
+            """Validate edited scores, recompute totals, and persist to database.
+
+            :param list[dict] rows: Updated table rows from DataTable.
+            :param list[dict] current_state: Previous table state (unused).
+            :return list[dict]: Updated table data with clamped values and totals.
+            """
             if not rows:
                 raise dash.exceptions.PreventUpdate
 
             df = pd.DataFrame(rows)
 
-            # Ensure columns exist
             for col in SCORE_COLS:
                 if col not in df.columns:
                     df[col] = np.nan
