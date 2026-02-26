@@ -15,18 +15,16 @@ from load_data import DataLoader
 BASE_COLS_PARTICIPANT = ["routine_name", "names", "age_group", "category"]
 BASE_COLS_JURY = ["routine_name", "age_group", "category"]
 
-TECH_SUBS = ["A", "B", "C"]
+T_SUBS = ["Q", "M", "D"]
+P_SUBS = ["P", "C", "I"]
+D_SUBS = ["S", "B", "N"]
 
-TP_JUDGES = [f"T{i}" for i in range(1, 5)] + [f"P{i}" for i in range(1, 5)]
+T_COLS = [f"T{i}_{s}" for i in range(1, 5) for s in T_SUBS]
+P_COLS = [f"P{i}_{s}" for i in range(1, 5) for s in P_SUBS]
+D_COLS = [f"D{i}_{s}" for i in range(1, 5) for s in D_SUBS]
 
-TP_SUBCOLS = [f"{j}_{s}" for j in TP_JUDGES for s in TECH_SUBS]
-
-SCORE_COLS = TP_SUBCOLS + ["D1", "D2", "D3", "D4"]
-
-T_COLS = [f"T{i}_{s}" for i in range(1, 5) for s in TECH_SUBS]
-P_COLS = [f"P{i}_{s}" for i in range(1, 5) for s in TECH_SUBS]
-
-D_COLS = ["D1", "D2", "D3", "D4"]
+TP_SUBCOLS = T_COLS + P_COLS
+SCORE_COLS = TP_SUBCOLS + D_COLS
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(script_dir, "config.json")
@@ -223,14 +221,12 @@ class Dashboard:
             if df_points.empty:
                 df_points = pd.DataFrame(columns=BASE_COLS_JURY)
 
-            # merge routine and points dataframes
             df = df_routines.merge(df_points, on=BASE_COLS_JURY, how="left")
 
             for col in ordered_cols:
                 if col not in df.columns:
                     df[col] = np.nan
 
-            # judges D3 and D4 are only judging groups
             def set_uneditable_judges(row):
                 """Disable D3 and D4 scoring for non-group categories.
 
@@ -239,7 +235,9 @@ class Dashboard:
                 """
                 cat = row["category"]
                 if cat in ["individual female", "individual male", "pair"]:
-                    row["D3"] = row["D4"] = "–"
+                    for sub in D_SUBS:
+                        row[f"D3_{sub}"] = "–"
+                        row[f"D4_{sub}"] = "–"
                 return row
 
             df = df.apply(set_uneditable_judges, axis=1)
@@ -283,21 +281,11 @@ class Dashboard:
             if col not in df.columns:
                 continue
 
-            if col in TP_SUBCOLS:
+            if col in TP_SUBCOLS or col in D_COLS:
                 judge, sub = col.split("_", 1)
                 columns.append(
                     {
                         "name": [judge, sub],
-                        "id": col,
-                        "type": "numeric",
-                        "editable": jury_mode,
-                    }
-                )
-
-            elif col in D_COLS:
-                columns.append(
-                    {
-                        "name": ["D", col],
                         "id": col,
                         "type": "numeric",
                         "editable": jury_mode,
@@ -348,7 +336,7 @@ class Dashboard:
                 {
                     "if": {
                         "filter_query": "{category} = 'individual'",
-                        "column_id": ["D3", "D4"],
+                        "column_id": [c for c in D_COLS if c.startswith(("D3_", "D4_"))]
                     },
                     "pointerEvents": "none",
                     "color": "#888",
@@ -528,7 +516,7 @@ class Dashboard:
 
             # clamp judge values between 0 and 10 (D3 and D4 between 0 and 999)
             def clamp_cell(value, category, colname):
-                if colname in ["D3", "D4"] and category in ["individual", "pair"]:
+                if colname.startswith(("D3_", "D4_")) and category in ["individual", "pair"]:
                     return "–"
                 if value == "–":
                     return "–"
