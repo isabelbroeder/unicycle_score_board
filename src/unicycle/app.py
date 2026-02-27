@@ -27,10 +27,10 @@ TP_SUBCOLS = T_COLS + P_COLS
 SCORE_COLS = TP_SUBCOLS + D_COLS
 
 COLUMN_LABELS = {
-    "routine_name": "Kür Name",
+    "routine_name": "Kür-Name",
     "names": "Namen*",
     "age_group": "Altersklasse",
-    "category": "Kategorie",
+    "category_label": "Kategorie",
     "Gesamtpunkte": "Gesamtpunkte",
 }
 
@@ -49,6 +49,27 @@ CATEGORY_ORDER = [
     "Kleingruppe",
     "Großgruppe",
 ]
+
+JUDGE_LEGEND = {
+
+    "T": {
+        "Q": "Anzahl der Einrad-Elemente und Übergänge",
+        "M": "Beherrschung und Qualität der Ausführung",
+        "D": "Schwierigkeit und Dauer",
+    },
+
+    "P": {
+        "P": "Präsenz/Ausführung",
+        "C": "Komposition/Choreografie",
+        "I": "Interpretation der Musik/Timing",
+    },
+
+    "D": {
+        "S": "Kleine Abstiege",
+        "B": "Große Abstiege",
+        "N": "Anzahl der Fahrer:innen",
+    },
+}
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(script_dir, "config.json")
@@ -158,13 +179,15 @@ class Dashboard:
                 dcc.Store(id="jury-access", data=False),
                 dbc.Modal(
                     [
-                        dbc.ModalHeader("🔒 Jury-Zugang"),
+                        dbc.ModalHeader("🔒 Jury-Zugang",
+                                        id="password-modal-header"
+                                        ),
                         dbc.ModalBody(
                             [
                                 html.Div(
                                     "Bitte Passwort eingeben:",
                                     style={"marginBottom": "10px"},
-                                ),
+                                    ),
                                 dcc.Input(
                                     id="password-input",
                                     type="password",
@@ -181,7 +204,8 @@ class Dashboard:
                                     id="password-error",
                                     style={"color": "red", "marginTop": "10px"},
                                 ),
-                            ]
+                            ],
+                            id="password-modal-body"
                         ),
                         dbc.ModalFooter(
                             [
@@ -197,7 +221,8 @@ class Dashboard:
                                     color="primary",
                                     n_clicks=0,
                                 ),
-                            ]
+                            ],
+                            id="password-modal-footer"
                         ),
                     ],
                     id="password-modal",
@@ -223,6 +248,95 @@ class Dashboard:
             "type": "numeric",
             "editable": jury_mode,
         }
+
+    def _judge_legend_collapsible(self, theme):
+
+        button_style = {
+            "backgroundColor": theme["headerBg"],
+            "color": theme["textColor"],
+            "border": f"1px solid {theme['border']}",
+            "borderRadius": "8px",
+            "padding": "10px 15px",
+            "cursor": "pointer",
+            "marginBottom": "10px",
+            "fontWeight": "bold",
+        }
+
+        container_style = {
+            "backgroundColor": theme["cellBg"],
+            "border": f"1px solid {theme['border']}",
+            "borderRadius": "8px",
+            "padding": "15px",
+            "marginBottom": "20px",
+        }
+
+        grid_style = {
+            "display": "grid",
+            "gridTemplateColumns": "repeat(3, 1fr)",
+            "gap": "20px",
+        }
+
+        def build_column(judge, subs):
+            header = html.Div(
+                f"Judge {judge}",
+                style={
+                    "fontWeight": "bold",
+                    "marginBottom": "8px",
+                    "fontSize": "16px",
+                },
+            )
+
+            items = []
+
+            for sub, text in subs.items():
+                label = f"{judge}1–{judge}4 {sub}"
+
+                items.append(
+                    html.Div(
+                        [
+                            html.Span(
+                                label,
+                                style={"fontWeight": "bold"},
+                            ),
+                            html.Div(
+                                text,
+                                style={"fontSize": "13px", "opacity": "0.8"},
+                            ),
+                        ],
+                        style={"marginBottom": "8px"},
+                    )
+                )
+
+            return html.Div([header] + items)
+
+        legend_content = html.Div(
+            [
+                build_column("T", JUDGE_LEGEND["T"]),
+                build_column("P", JUDGE_LEGEND["P"]),
+                build_column("D", JUDGE_LEGEND["D"]),
+            ],
+            style=grid_style,
+        )
+
+        return html.Div(
+            [
+                html.Button(
+                    "📖 Bewertungskriterien anzeigen",
+                    id="legend-toggle-btn",
+                    n_clicks=0,
+                    style=button_style,
+                ),
+
+                html.Div(
+                    legend_content,
+                    id="legend-container",
+                    style={
+                        **container_style,
+                        "display": "none",
+                    },
+                ),
+            ]
+        )
 
     def _datatable(self, df: pd.DataFrame, theme, editable=False, jury_mode=False):
         """Create a Dash DataTable configured for participant or jury mode.
@@ -311,15 +425,17 @@ class Dashboard:
             df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
 
         if "category" in df.columns:
-            df["category"] = df["category"].map(CATEGORY_LABELS).fillna(df["category"])
+            df["category_label"] = (
+                df["category"].map(CATEGORY_LABELS).fillna(df["category"])
+            )
 
-        df["category"] = pd.Categorical(
-            df["category"],
+        df["category_label"] = pd.Categorical(
+            df["category_label"],
             categories=CATEGORY_ORDER,
             ordered=True,
         )
 
-        df = df.sort_values(["category", "age_group"])
+        df = df.sort_values(["category_label", "age_group"])
 
         columns = []
 
@@ -340,11 +456,16 @@ class Dashboard:
                 })
 
             else:
-                label = COLUMN_LABELS.get(col, col)
+                display_col = col
+
+                if col == "category":
+                    display_col = "category_label"
+
+                label = COLUMN_LABELS.get(display_col, display_col)
 
                 columns.append({
                     "name": label if not jury_mode else ["", label],
-                    "id": col,
+                    "id": display_col,
                     "editable": False,
                 })
 
@@ -378,7 +499,7 @@ class Dashboard:
                     "textAlign": "center",
                 },
                 {
-                    "if": {"column_id": "category"},
+                    "if": {"column_id": "category_label"},
                     "textAlign": "center",
                 },
                 {
@@ -397,15 +518,15 @@ class Dashboard:
                 {
                     "if": {
                         "filter_query": (
-                            "{category} = 'Einzel weiblich' || "
-                            "{category} = 'Einzel männlich' || "
-                            "{category} = 'Paar'"
+                            "{category} = 'individual female' || "
+                            "{category} = 'individual male' || "
+                            "{category} = 'pair'"
                         ),
                         "column_id": [c for c in D_COLS if c.startswith(("D3_", "D4_"))],
                     },
                     "pointerEvents": "none",
-                    "color": "#888",
                     "backgroundColor": "#444",
+                    "color": "#888",
                 },
             ],
         )
@@ -492,11 +613,39 @@ class Dashboard:
                 raise dash.exceptions.PreventUpdate
 
         @self.app.callback(
+            Output("legend-container", "style"),
+            Output("legend-toggle-btn", "children"),
+            Input("legend-toggle-btn", "n_clicks"),
+            State("legend-container", "style"),
+            prevent_initial_call=True,
+        )
+        def toggle_legend(n_clicks, current_style):
+
+            visible = current_style.get("display") == "block"
+
+            new_display = "none" if visible else "block"
+
+            button_text = (
+                "📖 Jury-Kategorien anzeigen"
+                if visible
+                else "📖 Jury-Kategorien ausblenden"
+            )
+
+            current_style["display"] = new_display
+
+            return current_style, button_text
+
+        @self.app.callback(
             Output("page-container", "style"),
             Output("table-container", "children"),
             Output("page-title", "children"),
             Output("view-switch-btn", "children"),
+            Output("view-switch-btn", "style"),
             Output("theme-icon", "children"),
+            Output("password-modal-header", "style"),
+            Output("password-modal-body", "style"),
+            Output("password-modal-footer", "style"),
+            Output("password-input", "style"),
             Input("theme-toggle", "value"),
             Input("jury-access", "data"),
             prevent_initial_call=False,
@@ -510,6 +659,43 @@ class Dashboard:
                 table component, title text, switch button text, and theme icon.
             """
             theme = self.DARK_THEME if is_dark else self.LIGHT_THEME
+            password_input_style = {
+                "width": "100%",
+                "padding": "8px",
+                "color": theme["textColor"],
+                "backgroundColor": theme["cellBg"],
+                "border": f"1px solid {theme['border']}",
+            }
+            view_switch_style = {
+                "position": "absolute",
+                "top": "20px",
+                "right": "25px",
+                "backgroundColor": theme["headerBg"],
+                "color": theme["textColor"],
+                "border": f"1px solid {theme['border']}",
+                "borderRadius": "8px",
+                "padding": "10px 15px",
+                "cursor": "pointer",
+                "fontSize": "14px",
+            }
+            modal_content_style = {
+                "backgroundColor": theme["cellBg"],
+                "color": theme["textColor"],
+                "border": f"1px solid {theme['border']}",
+            }
+            modal_header_style = {
+                "backgroundColor": theme["headerBg"],
+                "color": theme["textColor"],
+                "borderBottom": f"1px solid {theme['border']}",
+            }
+            modal_body_style = {
+                "backgroundColor": theme["cellBg"],
+                "color": theme["textColor"],
+            }
+            modal_footer_style = {
+                "backgroundColor": theme["cellBg"],
+                "borderTop": f"1px solid {theme['border']}",
+            }
             icon = "🌙" if is_dark else "🌞"
             jury_mode = jury_access
 
@@ -528,9 +714,14 @@ class Dashboard:
                 ).get_data()
                 title = "⚖️ Jury Übersicht"
                 button_text = "👥 Wechsel zu Teilnehmer Ansicht"
-                table = self._datatable(
-                    df_routines, theme, editable=True, jury_mode=True
-                )
+                legend = self._judge_legend_collapsible(theme)
+
+                table = html.Div([
+                    legend,
+                    self._datatable(
+                        df_routines, theme, editable=True, jury_mode=True
+                    )
+                ])
             else:
                 df_riders = DataLoader(
                     Path(unicycle_score_board_path, "data/riders.db"), "riders"
@@ -576,7 +767,18 @@ class Dashboard:
                     df_display, theme, editable=False, jury_mode=False
                 )
 
-            return page_style, table, title, button_text, icon
+            return (
+                page_style,
+                table,
+                title,
+                button_text,
+                view_switch_style,
+                icon,
+                modal_header_style,
+                modal_body_style,
+                modal_footer_style,
+                password_input_style,
+            )
 
         @self.app.callback(
             Output("data-table", "data", allow_duplicate=True),
@@ -602,27 +804,31 @@ class Dashboard:
 
             # clamp judge values between 0 and 10 (D3 and D4 between 0 and 999)
             def clamp_cell(value, category, colname):
-                if colname.startswith(("D3_", "D4_")) and category in [
-                    "Einzel weiblich",
-                    "Einzel männlich",
-                    "Paar",
-                ]:
+
+                LOCKED = {"individual female", "individual male", "pair"}
+
+                if colname.startswith(("D3_", "D4_")) and category in LOCKED:
                     return "–"
+
                 if value == "–":
                     return "–"
+
                 try:
                     v = float(value)
-                except Exception:
+                except:
                     return np.nan
+
                 if v < 0:
                     return np.nan
+
                 if colname in D_COLS:
                     if v > 999 or not v.is_integer():
                         return np.nan
                     return int(v)
-                else:
-                    if v > 10:
-                        return np.nan
+
+                if v > 10:
+                    return np.nan
+
                 return v
 
             # Apply clamping per-row and per-scoring column
