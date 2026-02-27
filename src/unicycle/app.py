@@ -26,6 +26,14 @@ D_COLS = [f"D{i}_{s}" for i in range(1, 5) for s in D_SUBS]
 TP_SUBCOLS = T_COLS + P_COLS
 SCORE_COLS = TP_SUBCOLS + D_COLS
 
+COLUMN_LABELS = {
+    "routine_name": "Kür Name",
+    "names": "Namen",
+    "age_group": "Altersklasse",
+    "category": "Kategorie",
+    "Gesamtpunkte": "Gesamtpunkte",
+}
+
 script_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(script_dir, "config.json")
 unicycle_score_board_path = Path(script_dir).parent.parent
@@ -189,6 +197,17 @@ class Dashboard:
             ],
         )
 
+    def _judge_column(self, col, jury_mode):
+        """Generate a column definition for judge score columns."""
+        judge, sub = col.split("_", 1)
+
+        return {
+            "name": [judge, sub],
+            "id": col,
+            "type": "numeric",
+            "editable": jury_mode,
+        }
+
     def _datatable(self, df: pd.DataFrame, theme, editable=False, jury_mode=False):
         """Create a Dash DataTable configured for participant or jury mode.
 
@@ -278,33 +297,29 @@ class Dashboard:
         columns = []
 
         for col in ordered_cols:
+
             if col not in df.columns:
                 continue
 
-            if col in TP_SUBCOLS or col in D_COLS:
-                judge, sub = col.split("_", 1)
-                columns.append(
-                    {
-                        "name": [judge, sub],
-                        "id": col,
-                        "type": "numeric",
-                        "editable": jury_mode,
-                    }
-                )
+            if col in SCORE_COLS:
+                columns.append(self._judge_column(col, jury_mode))
 
             elif col == "Gesamtpunkte":
-                columns.append(
-                    {"name": ["", col], "id": col, "type": "numeric", "editable": False}
-                )
+                columns.append({
+                    "name": ["", COLUMN_LABELS.get(col, col)],
+                    "id": col,
+                    "type": "numeric",
+                    "editable": False,
+                })
 
             else:
-                columns.append(
-                    {
-                        "name": col if not jury_mode else ["", col],
-                        "id": col,
-                        "editable": False,
-                    }
-                )
+                label = COLUMN_LABELS.get(col, col)
+
+                columns.append({
+                    "name": label if not jury_mode else ["", label],
+                    "id": col,
+                    "editable": False,
+                })
 
         return dash_table.DataTable(
             id="data-table",
