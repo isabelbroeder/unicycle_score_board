@@ -28,11 +28,27 @@ SCORE_COLS = TP_SUBCOLS + D_COLS
 
 COLUMN_LABELS = {
     "routine_name": "Kür Name",
-    "names": "Namen",
+    "names": "Namen*",
     "age_group": "Altersklasse",
     "category": "Kategorie",
     "Gesamtpunkte": "Gesamtpunkte",
 }
+
+CATEGORY_LABELS = {
+    "individual male": "Einzel männlich",
+    "individual female": "Einzel weiblich",
+    "pair": "Paar",
+    "small_group": "Kleingruppe",
+    "large_group": "Großgruppe",
+}
+
+CATEGORY_ORDER = [
+    "Einzel weiblich",
+    "Einzel männlich",
+    "Paar",
+    "Kleingruppe",
+    "Großgruppe",
+]
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 config_path = os.path.join(script_dir, "config.json")
@@ -262,7 +278,7 @@ class Dashboard:
             df = df.apply(set_uneditable_judges, axis=1)
 
             # calculation of all points per row ("–" = 0)
-            def compute_total(row: pd.Series) -> float:
+            def compute_total(row):
                 """Compute total score across all judge columns.
 
                 :param pd.Series row: Scoring dataframe row.
@@ -294,6 +310,17 @@ class Dashboard:
 
             df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
 
+        if "category" in df.columns:
+            df["category"] = df["category"].map(CATEGORY_LABELS).fillna(df["category"])
+
+        df["category"] = pd.Categorical(
+            df["category"],
+            categories=CATEGORY_ORDER,
+            ordered=True,
+        )
+
+        df = df.sort_values(["category", "age_group"])
+
         columns = []
 
         for col in ordered_cols:
@@ -321,7 +348,7 @@ class Dashboard:
                     "editable": False,
                 })
 
-        return dash_table.DataTable(
+        table = dash_table.DataTable(
             id="data-table",
             data=df.to_dict("records"),
             columns=columns,
@@ -345,27 +372,58 @@ class Dashboard:
                 "padding": "8px",
                 "border": f"1px solid {theme['border']}",
             },
+            style_cell_conditional=[
+                {
+                    "if": {"column_id": "age_group"},
+                    "textAlign": "center",
+                },
+                {
+                    "if": {"column_id": "category"},
+                    "textAlign": "center",
+                },
+                {
+                    "if": {"column_type": "numeric"},
+                    "textAlign": "center",
+                },
+                {
+                    "if": {"column_id": "Gesamtpunkte"},
+                    "textAlign": "right",
+                    "fontWeight": "bold",
+                },
+            ],
             style_data_conditional=[
                 {"if": {"row_index": "odd"}, "backgroundColor": theme["oddRowBg"]},
                 # lock D3 + D4 for individual + PK (visual + pointer events)
                 {
                     "if": {
-                        "filter_query": "{category} = 'individual'",
-                        "column_id": [c for c in D_COLS if c.startswith(("D3_", "D4_"))]
+                        "filter_query": (
+                            "{category} = 'Einzel weiblich' || "
+                            "{category} = 'Einzel männlich' || "
+                            "{category} = 'Paar'"
+                        ),
+                        "column_id": [c for c in D_COLS if c.startswith(("D3_", "D4_"))],
                     },
                     "pointerEvents": "none",
                     "color": "#888",
-                },
-                {
-                    "if": {
-                        "filter_query": "{category} = 'pair'",
-                        "column_id": ["D3", "D4"],
-                    },
-                    "pointerEvents": "none",
-                    "color": "#888",
+                    "backgroundColor": "#444",
                 },
             ],
         )
+
+        if not jury_mode:
+            return html.Div([
+                table,
+                html.Div(
+                    "* Bei Klein- und Großgruppen wird statt der Namen die Anzahl der Teilnehmer angezeigt.",
+                    style={
+                        "marginTop": "10px",
+                        "fontSize": "12px",
+                        "opacity": "0.8"
+                    }
+                )
+            ])
+
+        return table
 
     # ----------------- Callbacks -----------------
     def _register_callbacks(self):
@@ -499,6 +557,19 @@ class Dashboard:
                     .merge(df_routines, on="routine_name", how="left")
                     .drop(columns="id_routine")
                 )
+                def format_names(row):
+                    """Format the 'names' column for participant display.
+
+                    :param pd.Series row: Row of the participant dataframe.
+                    :return str: Display value for the 'names' column.
+                    """
+                    if row["category"] in ["small_group", "large_group"]:
+                        if isinstance(row["names"], str):
+                            count = len(row["names"].split(","))
+                            return f"{count} Personen"
+                    return row["names"]
+
+                df_display["names"] = df_display.apply(format_names, axis=1)
                 title = "🏁 Teilnehmer Übersicht"
                 button_text = "⚖️ Wechsel zu Jury Ansicht"
                 table = self._datatable(
@@ -531,7 +602,11 @@ class Dashboard:
 
             # clamp judge values between 0 and 10 (D3 and D4 between 0 and 999)
             def clamp_cell(value, category, colname):
-                if colname.startswith(("D3_", "D4_")) and category in ["individual", "pair"]:
+                if colname.startswith(("D3_", "D4_")) and category in [
+                    "Einzel weiblich",
+                    "Einzel männlich",
+                    "Paar",
+                ]:
                     return "–"
                 if value == "–":
                     return "–"
