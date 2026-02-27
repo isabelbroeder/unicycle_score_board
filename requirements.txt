@@ -1,0 +1,9 @@
+pandas
+openpyxl
+dash
+dash_daq
+plotly
+dash_bootstrap_components
+python-dotenv
+numpy
+bcrypt
