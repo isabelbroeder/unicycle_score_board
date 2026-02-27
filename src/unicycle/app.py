@@ -239,7 +239,12 @@ class Dashboard:
         )
 
     def _judge_column(self, col, jury_mode):
-        """Generate a column definition for judge score columns."""
+        """Generate a column definition for judge score columns.
+
+        :param str col: Column identifier (e.g., "T1_Q").
+        :param bool jury_mode: Whether jury mode is active (editable scores).
+        :return dict: Dash DataTable column configuration dictionary.
+        """
         judge, sub = col.split("_", 1)
 
         return {
@@ -250,6 +255,11 @@ class Dashboard:
         }
 
     def _judge_legend_collapsible(self, theme):
+        """Build a collapsible legend explaining judge scoring categories.
+
+        :param dict theme: Active theme color configuration.
+        :return html.Div: Container with toggle button and legend content.
+        """
 
         button_style = {
             "backgroundColor": theme["headerBg"],
@@ -277,6 +287,12 @@ class Dashboard:
         }
 
         def build_column(judge, subs):
+            """Create a legend column for a specific judge category.
+
+            :param str judge: Judge category identifier (e.g., "T", "P", "D").
+            :param dict subs: Dictionary mapping subcategory codes to description text.
+            :return html.Div: Dash container with header and formatted legend entries.
+            """
             header = html.Div(
                 f"Judge {judge}",
                 style={
@@ -620,7 +636,12 @@ class Dashboard:
             prevent_initial_call=True,
         )
         def toggle_legend(n_clicks, current_style):
+            """Toggle visibility of the jury legend section.
 
+            :param int n_clicks: Number of times the toggle button was clicked.
+            :param dict current_style: Current style dictionary of the legend container.
+            :return tuple[dict, str]: Updated style dictionary and new button label text.
+            """
             visible = current_style.get("display") == "block"
 
             new_display = "none" if visible else "block"
@@ -651,12 +672,22 @@ class Dashboard:
             prevent_initial_call=False,
         )
         def update_dashboard(is_dark, jury_access):
-            """Update theme, view mode, titles, and table content.
+            """Update theme, view mode, titles, modal styling, and table content.
 
             :param bool is_dark: Whether dark theme is enabled.
             :param bool jury_access: Whether jury mode is active.
-            :return tuple[dict, object, str, str, str]: Updated page style,
-                table component, title text, switch button text, and theme icon.
+            :return tuple[
+                dict,        # page-container style
+                object,      # table-container children (DataTable or Div)
+                str,         # page title
+                str,         # view switch button text
+                dict,        # view switch button style
+                str,         # theme icon
+                dict,        # modal header style
+                dict,        # modal body style
+                dict,        # modal footer style
+                dict         # password input style
+            ]: Updated UI state and styling components.
             """
             theme = self.DARK_THEME if is_dark else self.LIGHT_THEME
             password_input_style = {
@@ -867,6 +898,10 @@ class Dashboard:
             return df.to_dict("records")
 
     def run(self):
+        """Start the Dash development server.
+
+        :return None: Runs the Dash app with debug mode enabled.
+        """
         self.app.run(debug=True)
 
 
