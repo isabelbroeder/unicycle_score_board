@@ -772,11 +772,11 @@ class Dashboard:
                 df_display = df_display.merge(df_routines, on="id_routine", how="left")
                 df_display = (
                     (
-                        df_display.groupby(["routine_name"], as_index=False).agg(
+                        df_display.groupby(["id_routine"], as_index=False).agg(
                             names=("name", lambda x: ", ".join(x))
-                        )  # problem bei gleichem Kürnamen
+                        )
                     )
-                    .merge(df_routines, on="routine_name", how="left")
+                    .merge(df_routines, on="id_routine", how="left")
                     .drop(columns="id_routine")
                 )
                 def format_names(row):
