@@ -8,11 +8,11 @@ import os
 
 from pandas import DataFrame
 
-
 from src.unicycle.functions import calculate_age
 from pathlib import Path
 
 from src.unicycle.load_data import DataLoader
+from src.unicycle.rider_db_handler import RiderDbHandler
 
 DATE_COMPETITION = datetime.datetime(2026, 3, 7, 0, 0)
 CATEGORIES = ["individual", "pair", "small_group", "large_group"]
@@ -47,21 +47,22 @@ def read_registration_file(path: Path) -> pandas.DataFrame:
         "age_group_large_group",
         "entry_fee",
     ]
-    registration = registration[registration["name"].notna()]  # only rows with entries
+    registration = registration[
+        registration["name"].notna()]  # only rows with entries
     registration = registration.drop(columns="entry_fee")
     registration = registration.convert_dtypes()
     registration["date_of_birth"] = registration["date_of_birth"].dt.date
 
     # Add club
     registration_overview = pd.read_excel(path, sheet_name=0, header=None)
-    cell = (7,"E") # Cell with club name
-    club = registration_overview.loc[cell[0]-1, list(string.ascii_uppercase).index(cell[1])]
+    cell = (7, "E")  # Cell with club name
+    club = registration_overview.loc[
+        cell[0] - 1, list(string.ascii_uppercase).index(cell[1])]
     number_of_riders = registration["name"].size
     registration.insert(4, "club", [club] * number_of_riders)
 
-    registration_stripped = registration.map(
-        lambda x: x.strip() if isinstance(x, str) else x
-    )
+    registration_stripped = registration.map(lambda x: x.strip()
+                                             if isinstance(x, str) else x)
     return registration_stripped
 
 
@@ -72,43 +73,15 @@ def create_database_riders(registration: pd.DataFrame):
         registration: dataframe with registration data
     """
 
-    # connect to database
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    unicycle_score_board_path = Path(script_dir).parent.parent
-    connection = sqlite3.connect(Path(unicycle_score_board_path, "data/riders.db"))
-    cursor = connection.cursor()
-    sqlite3.register_adapter(datetime.date, adapt_date_iso)
-    sqlite3.register_converter("date", convert_date)
-
-    # create new database
-    # cursor.execute("DROP TABLE IF EXISTS riders")
-    sql_create_table = """
-        CREATE TABLE IF NOT EXISTS riders (
-        id_rider INTEGER PRIMARY KEY AUTOINCREMENT,
-        name VARCHAR(50),
-        gender CHAR(1),
-        date_of_birth DATE,
-        age_competition_day INTEGER,
-        club VARCHAR(50));"""
-    cursor.execute(sql_create_table)
-    connection.commit()
-
-    # insert riders into database riders
-    df_riders = registration[["name", "date_of_birth", "age", "gender", "club"]]
-    for row in range(0, len(registration)):
-        age = calculate_age(df_riders["date_of_birth"][row], DATE_COMPETITION)
-        sql_insert = """INSERT INTO riders (name, gender, date_of_birth, age_competition_day, club) VALUES (? , ? , ? , ? , ?) """
-        data = (
-            df_riders["name"][row],
-            df_riders["gender"][row],
-            df_riders["date_of_birth"][row],
-            age,
-            df_riders["club"][row],
-        )
-        cursor.execute(sql_insert, data)
-        id_rider = cursor.lastrowid
-    connection.commit()
-    connection.close()
+    rider_db_handler = RiderDbHandler()
+    rider_db_handler.create_table()
+    df_riders = registration[[
+        "name", "date_of_birth", "age", "gender", "club"
+    ]]
+    lambda_age_at_competition = lambda df: df['date_of_birth'].apply(lambda date_of_birth: calculate_age(date_of_birth, DATE_COMPETITION))
+    df_riders.assign(age = lambda_age_at_competition)
+    sql_insert = """INSERT INTO riders (name, gender, date_of_birth, age_competition_day, club) VALUES (? , ? , ? , ? , ?) """
+    rider_db_handler.execute(sql_insert, df_riders.itertuples(index=False, name = None))
 
 
 def create_database_routines(registration: pd.DataFrame):
@@ -118,12 +91,10 @@ def create_database_routines(registration: pd.DataFrame):
         registration: dataframe with registration data
     """
 
-    # connect to database routines
     script_dir = os.path.dirname(os.path.abspath(__file__))
     unicycle_score_board_path = Path(script_dir).parent.parent
     connection_routines = sqlite3.connect(
-        Path(unicycle_score_board_path, "data/routines.db")
-    )
+        Path(unicycle_score_board_path, "data/routines.db"))
     cursor_routines = connection_routines.cursor()
 
     # create new database routines
@@ -139,8 +110,7 @@ def create_database_routines(registration: pd.DataFrame):
 
     # connect to database riders_routines
     connection_riders_routines = sqlite3.connect(
-        Path(unicycle_score_board_path, "data/riders_routines.db")
-    )
+        Path(unicycle_score_board_path, "data/riders_routines.db"))
     cursor_riders_routines = connection_riders_routines.cursor()
 
     # create new database riders_routines
@@ -155,20 +125,17 @@ def create_database_routines(registration: pd.DataFrame):
 
     # connect to database riders
     connection_riders = sqlite3.connect(
-        Path(unicycle_score_board_path, "data/riders.db")
-    )
+        Path(unicycle_score_board_path, "data/riders.db"))
     cursor_riders = connection_riders.cursor()
 
     for category in CATEGORIES:
-        for age_group in set(
-            registration["age_group_" + str(category)].dropna()
-        ):  # age groups in this category
+        for age_group in set(registration[
+                "age_group_" +
+                str(category)].dropna()):  # age groups in this category
             for routine_name in set(
-                (
-                    registration[str("name_" + category)].where(
-                        registration[str("age_group_" + category)] == age_group
-                    )
-                ).dropna()  # routine names in this category and age group
+                (registration[str("name_" + category)].where(
+                    registration[str("age_group_" + category)] == age_group)
+                 ).dropna()  # routine names in this category and age group
             ):
                 if routine_name.isspace():
                     continue
@@ -185,20 +152,16 @@ def create_database_routines(registration: pd.DataFrame):
                 id_routine = cursor_routines.lastrowid
 
                 # get riders of routine
-                name_riders = (
-                    registration[["name", "date_of_birth"]]
-                    .where(
-                        (registration[str("name_" + category)] == routine_name)
-                        & (registration[str("age_group_" + category)] == age_group)
-                    )
-                    .dropna()
-                )
+                name_riders = (registration[["name", "date_of_birth"]].where(
+                    (registration[str("name_" + category)] == routine_name)
+                    & (registration[str("age_group_" +
+                                        category)] == age_group)).dropna())
                 sql_select_id_rider = """SELECT id_rider FROM riders WHERE name == ? AND date_of_birth == ?"""
                 # name_riders = name_riders.reset_index()
                 for index, row in name_riders.iterrows():
                     id_rider = cursor_riders.execute(
-                        sql_select_id_rider, (row["name"], row["date_of_birth"])
-                    ).fetchone()[0]
+                        sql_select_id_rider,
+                        (row["name"], row["date_of_birth"])).fetchone()[0]
 
                     sql_insert = """INSERT INTO riders_routines (id_rider, id_routine) VALUES (?, ? ) """
                     data = (
@@ -221,55 +184,54 @@ def split_individual_male_female():
     unicycle_score_board_path = Path(script_dir).parent.parent
 
     dataloader_routines = DataLoader(
-        Path(unicycle_score_board_path, "data/routines.db"), "routines"
-    )
+        Path(unicycle_score_board_path, "data/routines.db"), "routines")
     df_routines = dataloader_routines.get_data(
         """SELECT id_routine, category FROM routines WHERE category == 'individual'"""
     )
     df_riders = DataLoader(
-        Path(unicycle_score_board_path, "data/riders.db"), "riders"
-    ).get_data("""SELECT id_rider, gender FROM riders""")
+        Path(unicycle_score_board_path, "data/riders.db"),
+        "riders").get_data("""SELECT id_rider, gender FROM riders""")
     df_riders_routines = DataLoader(
-        Path(unicycle_score_board_path, "data/riders_routines.db"), "riders_routines"
-    ).get_data()
+        Path(unicycle_score_board_path, "data/riders_routines.db"),
+        "riders_routines").get_data()
 
-    df_individual = df_riders_routines.merge(
-        df_riders, on="id_rider", how="left"
-    ).merge(df_routines, on="id_routine", how="right")
+    df_individual = df_riders_routines.merge(df_riders,
+                                             on="id_rider",
+                                             how="left").merge(df_routines,
+                                                               on="id_routine",
+                                                               how="right")
     df_individual["category"] = df_individual["category"].where(
-        df_individual["gender"] != "m", "individual male"
-    )
+        df_individual["gender"] != "m", "individual male")
     df_individual["category"] = df_individual["category"].where(
-        df_individual["gender"] != "w", "individual female"
-    )
+        df_individual["gender"] != "w", "individual female")
 
-    dataloader_routines.update_multiple_rows(
-        df_individual, ["id_routine"], ["category"]
-    )
+    dataloader_routines.update_multiple_rows(df_individual, ["id_routine"],
+                                             ["category"])
 
 
 def check_age_groups(age_groups: dict):
     """
-    Checks wheather the age groups in the registration file are the same
+    Checks whether the age groups in the registration file are correct.
+    If not the age group will be corrected
+
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     unicycle_score_board_path = Path(script_dir).parent.parent
 
     dataloader_routines = DataLoader(
-        Path(unicycle_score_board_path, "data/routines.db"), "routines"
-    )
+        Path(unicycle_score_board_path, "data/routines.db"), "routines")
     df_routines = dataloader_routines.get_data(
-        """SELECT id_routine, category, age_group FROM routines"""
-    )
-    df_riders = DataLoader(
-        Path(unicycle_score_board_path, "data/riders.db"), "riders"
-    ).get_data("""SELECT id_rider, age_competition_day FROM riders""")
+        """SELECT id_routine, category, age_group FROM routines""")
+    df_riders = DataLoader(Path(
+        unicycle_score_board_path, "data/riders.db"), "riders").get_data(
+            """SELECT id_rider, age_competition_day FROM riders""")
     df_riders_routines = DataLoader(
-        Path(unicycle_score_board_path, "data/riders_routines.db"), "riders_routines"
-    ).get_data()
-    df = df_riders_routines.merge(df_riders, on="id_rider", how="left").merge(
-        df_routines, on="id_routine", how="right"
-    )
+        Path(unicycle_score_board_path, "data/riders_routines.db"),
+        "riders_routines").get_data()
+    df = df_riders_routines.merge(df_riders, on="id_rider",
+                                  how="left").merge(df_routines,
+                                                    on="id_routine",
+                                                    how="right")
 
     df_max = df.groupby(["id_routine"]).max()
     print(df_max)
@@ -282,12 +244,14 @@ def check_age_groups(age_groups: dict):
         )
         if age_group_routine != df_max["age_group"].iloc[row]:
             new_row = pd.DataFrame(
-                {"id_routine": df_max.index[row], "age_group": age_group_routine},
+                {
+                    "id_routine": df_max.index[row],
+                    "age_group": age_group_routine
+                },
                 index=[0],
             )
             df_update_age_groups = pd.concat(
-                [new_row, df_update_age_groups.loc[:]]
-            ).reset_index(drop=True)
+                [new_row, df_update_age_groups.loc[:]]).reset_index(drop=True)
             print(
                 "INFO: the age group of routine",
                 df_max.index[row],
@@ -298,9 +262,8 @@ def check_age_groups(age_groups: dict):
             )
 
     if not df_update_age_groups.empty:
-        dataloader_routines.update_multiple_rows(
-            df_update_age_groups, ["id_routine"], ["age_group"]
-        )
+        dataloader_routines.update_multiple_rows(df_update_age_groups,
+                                                 ["id_routine"], ["age_group"])
 
 
 def set_age_group(age: int, age_groups: list) -> str:
@@ -323,20 +286,21 @@ def create_starting_order(age_groups):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     unicycle_score_board_path = Path(script_dir).parent.parent
 
-    # dataloader_routines = DataLoader(Path(unicycle_score_board_path, "data/routines.db"), "routines")
-
     df_routines = DataLoader(
         Path(unicycle_score_board_path, "data/routines.db"), "routines"
-    ).get_data("""SELECT id_routine, routine_name, category, age_group FROM routines""")
-    df_riders = DataLoader(
-        Path(unicycle_score_board_path, "data/riders.db"), "riders"
-    ).get_data("""SELECT id_rider, name, club FROM riders""")
-    df_riders_routines = DataLoader(
-        Path(unicycle_score_board_path, "data/riders_routines.db"), "riders_routines"
-    ).get_data()
-    df = df_riders_routines.merge(df_riders, on="id_rider", how="left").merge(
-        df_routines, on="id_routine", how="left"
+    ).get_data(
+        """SELECT id_routine, routine_name, category, age_group FROM routines"""
     )
+    df_riders = DataLoader(
+        Path(unicycle_score_board_path, "data/riders.db"),
+        "riders").get_data("""SELECT id_rider, name, club FROM riders""")
+    df_riders_routines = DataLoader(
+        Path(unicycle_score_board_path, "data/riders_routines.db"),
+        "riders_routines").get_data()
+    df = df_riders_routines.merge(df_riders, on="id_rider",
+                                  how="left").merge(df_routines,
+                                                    on="id_routine",
+                                                    how="left")
     df = df.groupby("id_routine").agg(lambda x: set(x))
     df = df.map(replace_single_element)
     df.category = pd.Categorical(
@@ -354,7 +318,6 @@ def create_starting_order(age_groups):
     df["name"] = df["name"].apply(lambda x: format_names(x))
     df = df[["routine_name", "name", "club", "category", "age_group"]]
 
-
     with pd.ExcelWriter("output.xlsx", engine="openpyxl") as writer:
         # df.to_excel(writer, index=False, startrow=1, startcol=0)
         empty_df = DataFrame()
@@ -364,7 +327,8 @@ def create_starting_order(age_groups):
         max_row = 1
         for category, list_age_group in age_groups.items():
             for age_group in list_age_group:
-                df1 = df[(df["category"] == category) & (df["age_group"] == age_group)]
+                df1 = df[(df["category"] == category)
+                         & (df["age_group"] == age_group)]
                 worksheet.merge_cells(f"A{max_row}:C{max_row}")
                 worksheet[f"A{max_row}"] = f"{category} {age_group}"
                 df1[["routine_name", "name", "club"]].to_excel(
@@ -388,7 +352,7 @@ def get_maximum_rows(sheet_object):
 
 def replace_single_element(s):
     if isinstance(s, set) and len(s) == 1:
-        return next(iter(s))
+        return s.pop()
     else:
         return s
 
@@ -403,39 +367,32 @@ def format_names(s):
         return s
 
 
-def adapt_date_iso(val):
-    """Adapt datetime.date to ISO 8601 date."""
-    return val.isoformat()
-
-
-def convert_date(val):
-    """Convert ISO 8601 date to datetime.date object."""
-    return datetime.date.fromisoformat(val.decode())
 
 
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     unicycle_score_board_path = Path(script_dir).parent.parent
 
-    registration_files =  Path(unicycle_score_board_path, "data/registration_files").rglob('*.xlsx')
+    registration_files = Path(unicycle_score_board_path,
+                              "data/registration_files").glob("*.xlsx")
     for file in registration_files:
-        registration = read_registration_file(path=Path(unicycle_score_board_path, file))
+        registration = read_registration_file(
+            path=Path(unicycle_score_board_path, file))
         create_database_riders(registration)
+        #create_database_routines(registration)
 
-        create_database_routines(registration)
-
-    split_individual_male_female()
-
+    #split_individual_male_female()
+    '''
     age_groups = {
         "individual male": ["U9", "U11", "U13", "U15", "15+"],
-        "individual female": ["U9","U11", "U13", "U15", "15+"],
-        "pair": ["U9","U11", "U13", "U15", "15+"],
+        "individual female": ["U9", "U11", "U13", "U15", "15+"],
+        "pair": ["U9", "U11", "U13", "U15", "15+"],
         "small_group": ["U15", "15+"],
         "large_group": ["U12", "12+"],
     }
     check_age_groups(age_groups)
     create_starting_order(age_groups)
-
+    '''
 
 if __name__ == "__main__":
     main()
