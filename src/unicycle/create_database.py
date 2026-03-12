@@ -7,12 +7,14 @@ import pandas as pd
 import os
 
 from pandas import DataFrame
-
-from src.unicycle.functions import calculate_age
 from pathlib import Path
 
+from src.unicycle.functions import calculate_age
 from src.unicycle.load_data import DataLoader
-from src.unicycle.rider_db_handler import RiderDbHandler
+from src.unicycle.riders_db_handler import RiderDbHandler
+from src.unicycle.routines_db_handler import RoutinesDbHandler
+from src.unicycle.riders_routines_db_handler import RidersRoutinesDbHandler
+
 
 DATE_COMPETITION = datetime.datetime(2026, 3, 7, 0, 0)
 CATEGORIES = ["individual", "pair", "small_group", "large_group"]
@@ -53,7 +55,6 @@ def read_registration_file(path: Path) -> pandas.DataFrame:
     registration = registration.convert_dtypes()
     registration["date_of_birth"] = registration["date_of_birth"].dt.date
 
-    # Add club
     registration_overview = pd.read_excel(path, sheet_name=0, header=None)
     cell = (7, "E")  # Cell with club name
     club = registration_overview.loc[
@@ -76,7 +77,7 @@ def create_database_riders(registration: pd.DataFrame):
     rider_db_handler = RiderDbHandler()
     rider_db_handler.create_table()
     df_riders = registration[[
-        "name", "date_of_birth", "age", "gender", "club"
+        "name", "gender", "date_of_birth", "age", "club"
     ]]
     lambda_age_at_competition = lambda df: df['date_of_birth'].apply(lambda date_of_birth: calculate_age(date_of_birth, DATE_COMPETITION))
     df_riders.assign(age = lambda_age_at_competition)
@@ -97,31 +98,17 @@ def create_database_routines(registration: pd.DataFrame):
         Path(unicycle_score_board_path, "data/routines.db"))
     cursor_routines = connection_routines.cursor()
 
-    # create new database routines
-    # cursor_routines.execute("DROP TABLE IF EXISTS routines")
-    sql_create = """
-    CREATE TABLE IF NOT EXISTS routines (
-    id_routine INTEGER PRIMARY KEY AUTOINCREMENT,
-    routine_name VARCHAR(50),
-    category VARCHAR(20),
-    age_group VARCHAR(20));"""
-    cursor_routines.execute(sql_create)
-    connection_routines.commit()
+    routines_db_handler = RoutinesDbHandler()
+    routines_db_handler.create_table()
+
 
     # connect to database riders_routines
     connection_riders_routines = sqlite3.connect(
         Path(unicycle_score_board_path, "data/riders_routines.db"))
     cursor_riders_routines = connection_riders_routines.cursor()
+    riders_routines_db_handler = RidersRoutinesDbHandler()
+    riders_routines_db_handler.create_table()
 
-    # create new database riders_routines
-    # cursor_riders_routines.execute("DROP TABLE IF EXISTS riders_routines")
-    sql_create = """
-        CREATE TABLE IF NOT EXISTS riders_routines (
-        id_rider INTEGER,
-        id_routine INTEGER,
-        PRIMARY KEY (id_rider, id_routine));"""
-    cursor_riders_routines.execute(sql_create)
-    connection_riders_routines.commit()
 
     # connect to database riders
     connection_riders = sqlite3.connect(
@@ -346,7 +333,6 @@ def get_maximum_rows(sheet_object):
     for row in sheet_object:
         if not all([(cell.value is None or cell.value == "") for cell in row]):
             count += 1
-
     return count
 
 
@@ -379,10 +365,10 @@ def main():
         registration = read_registration_file(
             path=Path(unicycle_score_board_path, file))
         create_database_riders(registration)
-        #create_database_routines(registration)
+        create_database_routines(registration)
 
     #split_individual_male_female()
-    '''
+'''
     age_groups = {
         "individual male": ["U9", "U11", "U13", "U15", "15+"],
         "individual female": ["U9", "U11", "U13", "U15", "15+"],
@@ -392,7 +378,7 @@ def main():
     }
     check_age_groups(age_groups)
     create_starting_order(age_groups)
-    '''
 
+'''
 if __name__ == "__main__":
     main()

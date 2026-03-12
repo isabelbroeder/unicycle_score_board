@@ -20,7 +20,7 @@ class RiderDbHandler(DbHandler):
     def create_table(self):
         sqlite3.register_adapter(datetime.date, adapt_date_iso)
         sqlite3.register_converter("date", convert_date)
-        sql_create_table = """
+        SQL_CREATE_TABLE = """
                 CREATE TABLE IF NOT EXISTS riders (
                 id_rider INTEGER PRIMARY KEY AUTOINCREMENT,
                 name VARCHAR(50),
@@ -29,5 +29,5 @@ class RiderDbHandler(DbHandler):
                 age_competition_day INTEGER,
                 club VARCHAR(50));"""
 
-        self.execute(sql_query=sql_create_table)
+        self.execute(sql_query=SQL_CREATE_TABLE)
 
