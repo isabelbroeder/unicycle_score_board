@@ -14,12 +14,24 @@ table_name_riders = "riders"
 
 
 class RiderDbHandler(DbHandler):
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        super().__init__(Path(unicycle_score_board_path, path_database, file_name_db_riders), table_name_riders)
+        if not hasattr(self, "initialised"):
+            self.initialised = True
+            # sqlite3.register_adapter(datetime.date, adapt_date_iso)
+            # sqlite3.register_converter("DATE", convert_date)
+            super().__init__(
+                Path(unicycle_score_board_path, path_database, file_name_db_riders),
+                table_name_riders,
+            )
 
     def create_table(self):
-        sqlite3.register_adapter(datetime.date, adapt_date_iso)
-        sqlite3.register_converter("date", convert_date)
         SQL_CREATE_TABLE = """
                 CREATE TABLE IF NOT EXISTS riders (
                 id_rider INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,4 +42,3 @@ class RiderDbHandler(DbHandler):
                 club VARCHAR(50));"""
 
         self.execute(sql_query=SQL_CREATE_TABLE)
-
