@@ -14,7 +14,7 @@ def calculate_age(date_of_birth: datetime, date: datetime = None) -> int:
         date = datetime.today()
     age = date.year - date_of_birth.year
     if date_of_birth.month > date.month or (
-            date_of_birth.month == date.month and date_of_birth.day
-            > date.day):  # had not yet had their birthday that year
+        date_of_birth.month == date.month and date_of_birth.day > date.day
+    ):  # had not yet had their birthday that year
         return age - 1
     return age

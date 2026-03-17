@@ -28,34 +28,40 @@ def calculate_result(category: str, age_group: str, judges: dict):
     df_sum_points_per_routine_per_judge = pd.DataFrame(index=df_points.index)
 
     for judge in itertools.chain(t_judges, p_judges):
-        columns = (df_points.columns[
-            df_points.columns.str.contains(judge)])
-        df_sum_points_per_routine_per_judge[judge] = df_points[
-            columns].sum(axis=1)
+        columns = df_points.columns[df_points.columns.str.contains(judge)]
+        df_sum_points_per_routine_per_judge[judge] = df_points[columns].sum(axis=1)
 
     divisor = 1
     for d_judge in d_judges:
         if category == "Small Group" or category == "Large Group":
             divisor = np.sqrt(df_points[f"{d_judge}_N"])
         df_sum_points_per_routine_per_judge[f"{d_judge}"] = 10 - (
-                    df_points[f"{d_judge}_S"] * 0.5 + df_points[f"{d_judge}_B"] / divisor)
+            df_points[f"{d_judge}_S"] * 0.5 + df_points[f"{d_judge}_B"] / divisor
+        )
 
-    percentage_per_routine_per_judge = df_sum_points_per_routine_per_judge.div(
-        df_sum_points_per_routine_per_judge.sum(axis=0)) * 100
+    percentage_per_routine_per_judge = (
+        df_sum_points_per_routine_per_judge.div(
+            df_sum_points_per_routine_per_judge.sum(axis=0)
+        )
+        * 100
+    )
     print(percentage_per_routine_per_judge)
-    result = pd.DataFrame(index=df_points.index,
-                          columns=["T", "P", "D", "total"])
+    result = pd.DataFrame(index=df_points.index, columns=["T", "P", "D", "total"])
 
     for judge_domain in ["T", "P", "D"]:
-        relevant_cols = [
-            judge for judge in judges if judge.startswith(judge_domain)
-        ]
-        result[judge_domain] = percentage_per_routine_per_judge[
-            relevant_cols].mean(axis=1)
+        relevant_cols = [judge for judge in judges if judge.startswith(judge_domain)]
+        result[judge_domain] = percentage_per_routine_per_judge[relevant_cols].mean(
+            axis=1
+        )
 
-    f = lambda x: (x['T'] * 0.45 + x['P'] * 0.45 + x['D'] * 0.1)
-    result['total'] = result.apply(f, axis=1)
-    result["rank"] = result[["total", "T"]].apply(tuple, axis=1).rank(method='min', ascending=False).astype(int)
+    f = lambda x: (x["T"] * 0.45 + x["P"] * 0.45 + x["D"] * 0.1)
+    result["total"] = result.apply(f, axis=1)
+    result["rank"] = (
+        result[["total", "T"]]
+        .apply(tuple, axis=1)
+        .rank(method="min", ascending=False)
+        .astype(int)
+    )
     return result
 
 
@@ -83,16 +89,15 @@ def create_judges():
     number_d_judges_group = 4
     # Create dictionary
     judges = {
-        "individual female":
-            generate_judges(number_t_p_judges, number_d_judges_individual_pair),
-        "individual male":
-            generate_judges(number_t_p_judges, number_d_judges_individual_pair),
-        "pair":
-            generate_judges(number_t_p_judges, number_d_judges_individual_pair),
-        "small_group":
-            generate_judges(number_t_p_judges, number_d_judges_group),
-        "large_group":
-            generate_judges(number_t_p_judges, number_d_judges_group),
+        "individual female": generate_judges(
+            number_t_p_judges, number_d_judges_individual_pair
+        ),
+        "individual male": generate_judges(
+            number_t_p_judges, number_d_judges_individual_pair
+        ),
+        "pair": generate_judges(number_t_p_judges, number_d_judges_individual_pair),
+        "small_group": generate_judges(number_t_p_judges, number_d_judges_group),
+        "large_group": generate_judges(number_t_p_judges, number_d_judges_group),
     }
     return judges
 

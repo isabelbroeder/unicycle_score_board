@@ -51,19 +51,16 @@ CATEGORY_ORDER = [
 ]
 
 JUDGE_LEGEND = {
-
     "T": {
         "Q": "Anzahl der Einrad-Elemente und Übergänge",
         "M": "Beherrschung und Qualität der Ausführung",
         "D": "Schwierigkeit und Dauer",
     },
-
     "P": {
         "P": "Präsenz/Ausführung",
         "C": "Komposition/Choreografie",
         "I": "Interpretation der Musik/Timing",
     },
-
     "D": {
         "S": "Kleine Abstiege",
         "B": "Große Abstiege",
@@ -87,6 +84,7 @@ class Dashboard:
     callbacks, theming, and execution logic. It provides both participant
     and jury views with optional editing and password-protected access.
     """
+
     def __init__(self):
         """Initialize the Dash app, themes, layout, and callbacks."""
         self.app = Dash(
@@ -179,15 +177,13 @@ class Dashboard:
                 dcc.Store(id="jury-access", data=False),
                 dbc.Modal(
                     [
-                        dbc.ModalHeader("🔒 Jury-Zugang",
-                                        id="password-modal-header"
-                                        ),
+                        dbc.ModalHeader("🔒 Jury-Zugang", id="password-modal-header"),
                         dbc.ModalBody(
                             [
                                 html.Div(
                                     "Bitte Passwort eingeben:",
                                     style={"marginBottom": "10px"},
-                                    ),
+                                ),
                                 dcc.Input(
                                     id="password-input",
                                     type="password",
@@ -205,7 +201,7 @@ class Dashboard:
                                     style={"color": "red", "marginTop": "10px"},
                                 ),
                             ],
-                            id="password-modal-body"
+                            id="password-modal-body",
                         ),
                         dbc.ModalFooter(
                             [
@@ -222,7 +218,7 @@ class Dashboard:
                                     n_clicks=0,
                                 ),
                             ],
-                            id="password-modal-footer"
+                            id="password-modal-footer",
                         ),
                     ],
                     id="password-modal",
@@ -342,7 +338,6 @@ class Dashboard:
                     n_clicks=0,
                     style=button_style,
                 ),
-
                 html.Div(
                     legend_content,
                     id="legend-container",
@@ -456,7 +451,6 @@ class Dashboard:
         columns = []
 
         for col in ordered_cols:
-
             if col not in df.columns:
                 continue
 
@@ -464,12 +458,14 @@ class Dashboard:
                 columns.append(self._judge_column(col, jury_mode))
 
             elif col == "Gesamtpunkte":
-                columns.append({
-                    "name": ["", COLUMN_LABELS.get(col, col)],
-                    "id": col,
-                    "type": "numeric",
-                    "editable": False,
-                })
+                columns.append(
+                    {
+                        "name": ["", COLUMN_LABELS.get(col, col)],
+                        "id": col,
+                        "type": "numeric",
+                        "editable": False,
+                    }
+                )
 
             else:
                 display_col = col
@@ -479,11 +475,13 @@ class Dashboard:
 
                 label = COLUMN_LABELS.get(display_col, display_col)
 
-                columns.append({
-                    "name": label if not jury_mode else ["", label],
-                    "id": display_col,
-                    "editable": False,
-                })
+                columns.append(
+                    {
+                        "name": label if not jury_mode else ["", label],
+                        "id": display_col,
+                        "editable": False,
+                    }
+                )
 
         table = dash_table.DataTable(
             id="data-table",
@@ -538,7 +536,9 @@ class Dashboard:
                             "{category} = 'individual male' || "
                             "{category} = 'pair'"
                         ),
-                        "column_id": [c for c in D_COLS if c.startswith(("D3_", "D4_"))],
+                        "column_id": [
+                            c for c in D_COLS if c.startswith(("D3_", "D4_"))
+                        ],
                     },
                     "pointerEvents": "none",
                     "backgroundColor": "#444",
@@ -548,23 +548,26 @@ class Dashboard:
         )
 
         if not jury_mode:
-            return html.Div([
-                table,
-                html.Div(
-                    "* Bei Klein- und Großgruppen wird statt der Namen die Anzahl der Teilnehmer angezeigt.",
-                    style={
-                        "marginTop": "10px",
-                        "fontSize": "12px",
-                        "opacity": "0.8"
-                    }
-                )
-            ])
+            return html.Div(
+                [
+                    table,
+                    html.Div(
+                        "* Bei Klein- und Großgruppen wird statt der Namen die Anzahl der Teilnehmer angezeigt.",
+                        style={
+                            "marginTop": "10px",
+                            "fontSize": "12px",
+                            "opacity": "0.8",
+                        },
+                    ),
+                ]
+            )
 
         return table
 
     # ----------------- Callbacks -----------------
     def _register_callbacks(self):
         """Register all Dash callbacks for UI interactivity and persistence."""
+
         @self.app.callback(
             Output("password-modal", "is_open"),
             Output("password-error", "children"),
@@ -747,12 +750,14 @@ class Dashboard:
                 button_text = "👥 Wechsel zu Teilnehmer Ansicht"
                 legend = self._judge_legend_collapsible(theme)
 
-                table = html.Div([
-                    legend,
-                    self._datatable(
-                        df_routines, theme, editable=True, jury_mode=True
-                    )
-                ])
+                table = html.Div(
+                    [
+                        legend,
+                        self._datatable(
+                            df_routines, theme, editable=True, jury_mode=True
+                        ),
+                    ]
+                )
             else:
                 df_riders = DataLoader(
                     Path(unicycle_score_board_path, "data/riders.db"), "riders"
@@ -779,6 +784,7 @@ class Dashboard:
                     .merge(df_routines, on="id_routine", how="left")
                     .drop(columns="id_routine")
                 )
+
                 def format_names(row):
                     """Format the 'names' column for participant display.
 
@@ -835,7 +841,6 @@ class Dashboard:
 
             # clamp judge values between 0 and 10 (D3 and D4 between 0 and 999)
             def clamp_cell(value, category, colname):
-
                 LOCKED = {"individual female", "individual male", "pair"}
 
                 if colname.startswith(("D3_", "D4_")) and category in LOCKED:

@@ -55,8 +55,9 @@ class DataLoader:
         except Exception as e:
             print(f"❌ Error writing to {self.table_name}: {e}")
 
-    def update_multiple_rows(self, df: pd.DataFrame, key_columns: list,
-                             update_columns: list):
+    def update_multiple_rows(
+        self, df: pd.DataFrame, key_columns: list, update_columns: list
+    ):
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -67,16 +68,14 @@ class DataLoader:
             WHERE {" AND ".join([f"{col} = ?" for col in key_columns])}
             """
 
-            data = [[row[col] for col in update_columns] +
-                    [row[col] for col in key_columns]
-                    for _, row in df.iterrows()]
+            data = [
+                [row[col] for col in update_columns] + [row[col] for col in key_columns]
+                for _, row in df.iterrows()
+            ]
 
             cursor.executemany(sql, data)
             conn.commit()
             conn.close()
-            print(
-                f"✅ {update_columns} in {self.table_name} updated successfully."
-            )
+            print(f"✅ {update_columns} in {self.table_name} updated successfully.")
         except Exception as e:
-            print(
-                f"❌ Error updating {update_columns} in {self.table_name}: {e}")
+            print(f"❌ Error updating {update_columns} in {self.table_name}: {e}")
