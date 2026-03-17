@@ -11,15 +11,24 @@ TABLE_NAME = "routines"
 
 
 class RoutinesDbHandler(DbHandler):
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
-        super().__init__(Path(unicycle_score_board_path, DIRECTORY_DB, FILE_NAME_DB), TABLE_NAME)
+        if not hasattr(self, "initialised"):
+            self.initialised = True
+            super().__init__(
+                Path(unicycle_score_board_path, DIRECTORY_DB, FILE_NAME_DB), TABLE_NAME
+            )
 
     def create_table(self):
-
         SQL_CREATE_TABLE = """CREATE TABLE IF NOT EXISTS routines (
         id_routine INTEGER PRIMARY KEY AUTOINCREMENT,
         routine_name VARCHAR(50),
         category VARCHAR(20),
         age_group VARCHAR(20));"""
         self.execute(sql_query=SQL_CREATE_TABLE)
-
