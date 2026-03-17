@@ -1,7 +1,9 @@
 import datetime
-
 from src.unicycle.functions import calculate_age
 from src.unicycle.create_database import set_age_group
+from src.unicycle.riders_db_handler import RiderDbHandler
+from src.unicycle.riders_routines_db_handler import RidersRoutinesDbHandler
+from src.unicycle.routines_db_handler import RoutinesDbHandler
 
 
 def test_calculate_age_year():
@@ -33,3 +35,22 @@ def test_set_age_group():
     assert "U15" == set_age_group(14, ["U13", "U15", "15+"])
     assert "15+" == set_age_group(15, ["U13", "U15", "15+"])
     assert "15+" == set_age_group(16, ["U13", "U15", "15+"])
+
+
+def test_database():
+    routines_db_handler = RoutinesDbHandler()
+    routines = routines_db_handler.get_data()
+
+    riders_routines_db_handler = RidersRoutinesDbHandler()
+    riders_routines = riders_routines_db_handler.get_data()
+
+    riders_db_handler = RiderDbHandler()
+    riders = riders_db_handler.get_data()
+    df = riders_routines.merge(riders, on="id_rider", how="left")
+    df = df.merge(routines, on="id_routine", how="left")
+    assert (
+        (df["name"] == "Lara Müller") & (df["routine_name"] == "Heinzelmännchen")
+    ).any()
+    assert (
+        (df["name"] == "Max Mustermann") & (df["routine_name"] == "Max und Moritz")
+    ).any()
