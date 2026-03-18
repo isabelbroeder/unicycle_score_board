@@ -13,7 +13,7 @@ file_name_db_riders = Path("riders.db")
 table_name_riders = "riders"
 
 
-class RiderDbHandler(DbHandler):
+class RidersDbHandler(DbHandler):
     _instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -24,12 +24,11 @@ class RiderDbHandler(DbHandler):
     def __init__(self):
         if not hasattr(self, "initialised"):
             self.initialised = True
-            # sqlite3.register_adapter(datetime.date, adapt_date_iso)
-            # sqlite3.register_converter("DATE", convert_date)
             super().__init__(
                 Path(unicycle_score_board_path, path_database, file_name_db_riders),
                 table_name_riders,
             )
+        #self.connect()
 
     def create_table(self):
         SQL_CREATE_TABLE = """

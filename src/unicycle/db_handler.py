@@ -1,8 +1,9 @@
 """Data loading class that is used by app.py."""
 
 import datetime
-import pandas as pd
 import sqlite3
+import pandas as pd
+
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -27,13 +28,15 @@ class DbHandler(ABC):
     def create_table(self):
         pass
 
+
     def disconnect(self):
         self.db_connection.close()
         self.is_connected = False
 
+
     def get_data(
         self, sql_query: str = None, par=None
-    ) -> pd.DataFrame:  # contains code from `DataLoader.get_data()`#get_data(self, sql_query: str = None, par=None) -> pd.DataFrame:
+    ) -> pd.DataFrame:
         """
         Load data from a SQLite database into a pandas DataFrame.
 
@@ -58,14 +61,15 @@ class DbHandler(ABC):
         if sql_query is None:
             sql_query = f"SELECT * FROM {self.table_name}"
         try:
-            df = pd.read_sql_query(sql_query, con=self.db_connection, params=par)
+            df = pd.read_sql_query(
+                sql_query, con=self.db_connection, params=par)
             return df
         except Exception as e:
             print(f"❌ Failed to load data from {self.table_name}: {e}")
             return pd.DataFrame()
 
-
     def execute(self, sql_query: str, params=None):
+
         try:
             if params is None:
                 self.cursor.execute(sql_query)
@@ -76,7 +80,6 @@ class DbHandler(ABC):
         except Exception as e:
             print(f"❌ Error executing sql query on {self.table_name}: {e}")
 
-
     def update_data(self, df: pd.DataFrame):
         try:
             df.to_sql(
@@ -85,7 +88,6 @@ class DbHandler(ABC):
             print(f"✅ {self.table_name} updated successfully.")
         except Exception as e:
             print(f"❌ Error writing to {self.table_name}: {e}")
-
 
     def update_multiple_rows(
         self, df: pd.DataFrame, key_columns: list, update_columns: list
@@ -97,15 +99,16 @@ class DbHandler(ABC):
             WHERE {" AND ".join([f"{col} = ?" for col in key_columns])}
             """
             data = [
-                [row[col] for col in update_columns] + [row[col] for col in key_columns]
+                [row[col] for col in update_columns] + [row[col]
+                                                        for col in key_columns]
                 for _, row in df.iterrows()
             ]
             self.cursor.executemany(sql, data)
             self.db_connection.commit()
             print(f"✅ {update_columns} in {self.table_name} updated successfully.")
         except Exception as e:
-            print(f"❌ Error updating {update_columns} in {self.table_name}: {e}")
-
+            print(
+                f"❌ Error updating {update_columns} in {self.table_name}: {e}")
 
     def last_row_id(self):
         return self.cursor.lastrowid

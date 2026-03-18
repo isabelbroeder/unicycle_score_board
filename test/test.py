@@ -1,7 +1,7 @@
 import datetime
 from src.unicycle.functions import calculate_age
 from src.unicycle.create_database import set_age_group
-from src.unicycle.riders_db_handler import RiderDbHandler
+from src.unicycle.riders_db_handler import RidersDbHandler
 from src.unicycle.riders_routines_db_handler import RidersRoutinesDbHandler
 from src.unicycle.routines_db_handler import RoutinesDbHandler
 
@@ -44,7 +44,7 @@ def test_database():
     riders_routines_db_handler = RidersRoutinesDbHandler()
     riders_routines = riders_routines_db_handler.get_data()
 
-    riders_db_handler = RiderDbHandler()
+    riders_db_handler = RidersDbHandler()
     riders = riders_db_handler.get_data()
     df = riders_routines.merge(riders, on="id_rider", how="left")
     df = df.merge(routines, on="id_routine", how="left")
