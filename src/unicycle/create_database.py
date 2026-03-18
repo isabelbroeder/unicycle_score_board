@@ -1,7 +1,6 @@
 import datetime
 import string
 
-import pandas
 import pandas as pd
 import os
 
@@ -20,13 +19,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 UNICYCLE_SCORE_BOARD_PATH = Path(SCRIPT_DIR).parent.parent
 
 
-def read_registration_file(path: Path) -> pandas.DataFrame:
+def read_registration_file(path: Path) -> pd.DataFrame:
     """
     Read the registration file
     Keyword arguments:
         path -- path to registration file
         club -- club whose registration file is read in
-    return pandas.Dataframe with registration data
+    return pd.Dataframe with registration data
     """
 
     registration = pd.read_excel(path, sheet_name=1, skiprows=4)
@@ -69,7 +68,7 @@ def read_registration_file(path: Path) -> pandas.DataFrame:
     return registration_stripped
 
 
-def create_database_riders(registration: pd.DataFrame, rider_db_handler=RidersDbHandler()):
+def fill_database_riders(registration: pd.DataFrame, rider_db_handler=RidersDbHandler()):
     """
     create the database riders.db
     Keyword arguments:
@@ -85,8 +84,10 @@ def create_database_riders(registration: pd.DataFrame, rider_db_handler=RidersDb
         sql_insert, df_riders.itertuples(index=False, name=None))
 
 
-def create_database_routines(registration: pd.DataFrame, riders_db_handler: RidersDbHandler(),  routines_db_handler: RoutinesDbHandler(), riders_routines_db_handler=RidersRoutinesDbHandler()
-                             ):
+def fill_database_routines(registration: pd.DataFrame,
+                           riders_db_handler= RidersDbHandler() ,
+                           routines_db_handler = RoutinesDbHandler(),
+                           riders_routines_db_handler = RidersRoutinesDbHandler() ):
     """
     create the databases routines.db and riders_routines.db
     Keyword arguments:
@@ -154,7 +155,9 @@ def create_database_routines(registration: pd.DataFrame, riders_db_handler: Ride
                 riders_routines_db_handler.execute(sql_insert, data)
 
 
-def split_individual_male_female(riders_db_handler: RidersDbHandler, routines_db_handler: RoutinesDbHandler, riders_routines_db_handler: RidersRoutinesDbHandler()):
+def split_individual_male_female(riders_db_handler: RidersDbHandler = RidersDbHandler(),
+                                 routines_db_handler: RoutinesDbHandler = RoutinesDbHandler(),
+                                 riders_routines_db_handler: RidersRoutinesDbHandler() = RidersRoutinesDbHandler()):
     """
     split the category individual into individual female and individual male
     """
@@ -182,7 +185,9 @@ def split_individual_male_female(riders_db_handler: RidersDbHandler, routines_db
     )
 
 
-def check_age_groups(age_groups: dict, riders_db_handler: RidersDbHandler, routines_db_handler: RoutinesDbHandler, riders_routines_db_handler: RidersRoutinesDbHandler()):
+def check_age_groups(age_groups: dict, riders_db_handler= RidersDbHandler() ,
+                     routines_db_handler =  RoutinesDbHandler() ,
+                     riders_routines_db_handler = RidersRoutinesDbHandler() ):
     """
     Checks whether the age groups in the registration file are correct.
     If not the age group will be corrected
@@ -248,7 +253,7 @@ def set_age_group(age: int, age_groups: list) -> str:
     return age_group_routine
 
 
-def create_starting_order(age_groups, riders_db_handler: RidersDbHandler, routines_db_handler: RoutinesDbHandler, riders_routines_db_handler: RidersRoutinesDbHandler()):
+def create_starting_order(age_groups, riders_db_handler=  RidersDbHandler(), routines_db_handler= RoutinesDbHandler(), riders_routines_db_handler =RidersRoutinesDbHandler()):
     df_riders = riders_db_handler.get_data(
         """SELECT id_rider, name, club FROM riders""")
     df_routines = routines_db_handler.get_data(
@@ -321,9 +326,6 @@ def format_names(s):
 
 
 def main():
-    # script_dir = os.path.dirname(os.path.abspath(__file__))
-    # unicycle_score_board_path = Path(script_dir).parent.parent
-
     registration_files = Path(
         UNICYCLE_SCORE_BOARD_PATH, "data/registration_files"
     ).glob("*.xlsx")
@@ -345,12 +347,10 @@ def main():
         registration = read_registration_file(
             path=Path(UNICYCLE_SCORE_BOARD_PATH, file)
         )
-        create_database_riders(registration, riders_db_handler)
-        create_database_routines(
-            registration, riders_db_handler, routines_db_handler, riders_routines_db_handler)
+        fill_database_riders(registration)
+        fill_database_routines(registration)
 
-    split_individual_male_female(
-        riders_db_handler, routines_db_handler, riders_routines_db_handler)
+    split_individual_male_female()
 
     age_groups = {
         "individual male": ["U9", "U11", "U13", "U15", "15+"],
@@ -360,10 +360,8 @@ def main():
         "large_group": ["U12", "12+"],
     }
 
-    check_age_groups(age_groups, riders_db_handler,
-                     routines_db_handler, riders_routines_db_handler)
-    create_starting_order(age_groups, riders_db_handler,
-                          routines_db_handler, riders_routines_db_handler)
+    check_age_groups(age_groups)
+    create_starting_order(age_groups)
 
     riders_routines_db_handler.disconnect()
     riders_db_handler.disconnect()
