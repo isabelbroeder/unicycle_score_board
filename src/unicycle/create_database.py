@@ -9,7 +9,6 @@ from pandas import DataFrame
 from pathlib import Path
 
 from src.unicycle.functions import calculate_age
-from src.unicycle.load_data import DataLoader
 from src.unicycle.riders_db_handler import RidersDbHandler
 from src.unicycle.routines_db_handler import RoutinesDbHandler
 from src.unicycle.riders_routines_db_handler import RidersRoutinesDbHandler
@@ -153,7 +152,7 @@ def create_database_routines(registration: pd.DataFrame,riders_db_handler: Rider
 
 
 
-def split_individual_male_female(riders_db_handler:RidersDbHandler, routines_db_handler: RidersDbHandler, riders_routines_db_handler : RidersRoutinesDbHandler()):
+def split_individual_male_female(riders_db_handler:RidersDbHandler, routines_db_handler: RoutinesDbHandler, riders_routines_db_handler : RidersRoutinesDbHandler()):
     """
     split the category individual into individual female and individual male
     """
@@ -179,27 +178,22 @@ def split_individual_male_female(riders_db_handler:RidersDbHandler, routines_db_
     )
 
 
-def check_age_groups(age_groups: dict):
+def check_age_groups(age_groups: dict,riders_db_handler:RidersDbHandler, routines_db_handler: RoutinesDbHandler, riders_routines_db_handler : RidersRoutinesDbHandler()):
     """
     Checks whether the age groups in the registration file are correct.
     If not the age group will be corrected
 
     """
 
-    dataloader_routines = DataLoader(
-        Path(UNICYCLE_SCORE_BOARD_PATH, "data/routines.db"), "routines"
-    )
-    df_routines = dataloader_routines.get_data(
+
+    df_routines = routines_db_handler.get_data(
         """SELECT id_routine, category, age_group FROM routines"""
     )
-    df_riders = DataLoader(
-        Path(UNICYCLE_SCORE_BOARD_PATH, "data/riders.db"), "riders"
-    ).get_data("""SELECT id_rider, age_competition_day FROM riders""")
-    df_riders_routines = DataLoader(
-        Path(UNICYCLE_SCORE_BOARD_PATH, "data/riders_routines.db"), "riders_routines"
-    ).get_data()
+    df_riders = riders_db_handler.get_data("""SELECT id_rider, age_competition_day FROM riders""")
+    df_riders_routines = riders_routines_db_handler.get_data()
+
     df = df_riders_routines.merge(df_riders, on="id_rider", how="left").merge(
-        df_routines, on="id_routine", how="right"
+        df_routines, on="id_routine", how="left"
     )
 
     df_max = df.groupby(["id_routine"]).max()
@@ -229,7 +223,7 @@ def check_age_groups(age_groups: dict):
             )
 
     if not df_update_age_groups.empty:
-        dataloader_routines.update_multiple_rows(
+        routines_db_handler.update_multiple_rows(
             df_update_age_groups, ["id_routine"], ["age_group"]
         )
 
@@ -243,26 +237,16 @@ def set_age_group(age: int, age_groups: list) -> str:
     age_group_routine = age_groups[0]
     for age_group in age_groups:
         if age_group[0] == "U" and int(age_group[1:]) > age:
-            # age_group_routine = age_group
             return age_group
         elif age_group[-1] == "+" and int(age_group[:-1]) <= age:
             return age_group
     return age_group_routine
 
 
-def create_starting_order(age_groups):
-    # script_dir = os.path.dirname(os.path.abspath(__file__))
-    # unicycle_score_board_path = Path(script_dir).parent.parent
-
-    df_routines = DataLoader(
-        Path(UNICYCLE_SCORE_BOARD_PATH, "data/routines.db"), "routines"
-    ).get_data("""SELECT id_routine, routine_name, category, age_group FROM routines""")
-    df_riders = DataLoader(
-        Path(UNICYCLE_SCORE_BOARD_PATH, "data/riders.db"), "riders"
-    ).get_data("""SELECT id_rider, name, club FROM riders""")
-    df_riders_routines = DataLoader(
-        Path(UNICYCLE_SCORE_BOARD_PATH, "data/riders_routines.db"), "riders_routines"
-    ).get_data()
+def create_starting_order(age_groups,riders_db_handler:RidersDbHandler, routines_db_handler: RoutinesDbHandler, riders_routines_db_handler : RidersRoutinesDbHandler()):
+    df_riders = riders_db_handler.get_data("""SELECT id_rider, name, club FROM riders""")
+    df_routines = routines_db_handler.get_data("""SELECT id_routine, routine_name, category, age_group FROM routines""")
+    df_riders_routines = riders_routines_db_handler.get_data()
     df = df_riders_routines.merge(df_riders, on="id_rider", how="left").merge(
         df_routines, on="id_routine", how="left"
     )
@@ -284,10 +268,8 @@ def create_starting_order(age_groups):
     df = df[["routine_name", "name", "club", "category", "age_group"]]
 
     with pd.ExcelWriter("output.xlsx", engine="openpyxl") as writer:
-        # df.to_excel(writer, index=False, startrow=1, startcol=0)
         empty_df = DataFrame()
         empty_df.to_excel(writer, sheet_name="Tabelle1")
-        workbook = writer.book
         worksheet = writer.sheets["Tabelle1"]
         max_row = 1
         for category, list_age_group in age_groups.items():
@@ -361,7 +343,6 @@ def main():
     split_individual_male_female(riders_db_handler, routines_db_handler,riders_routines_db_handler)
 
 
-
     age_groups = {
         "individual male": ["U9", "U11", "U13", "U15", "15+"],
         "individual female": ["U9", "U11", "U13", "U15", "15+"],
@@ -370,8 +351,8 @@ def main():
         "large_group": ["U12", "12+"],
     }
 
-    #check_age_groups(age_groups)
-    #create_starting_order(age_groups)
+    check_age_groups(age_groups,riders_db_handler, routines_db_handler,riders_routines_db_handler)
+    create_starting_order(age_groups,riders_db_handler, routines_db_handler,riders_routines_db_handler)
 
     riders_routines_db_handler.disconnect()
     riders_db_handler.disconnect()
