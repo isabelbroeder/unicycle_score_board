@@ -10,7 +10,7 @@ from pathlib import Path
 
 from src.unicycle.functions import calculate_age
 from src.unicycle.load_data import DataLoader
-from src.unicycle.riders_db_handler import RiderDbHandler
+from src.unicycle.riders_db_handler import RidersDbHandler
 from src.unicycle.routines_db_handler import RoutinesDbHandler
 from src.unicycle.riders_routines_db_handler import RidersRoutinesDbHandler
 
@@ -69,42 +69,27 @@ def read_registration_file(path: Path) -> pandas.DataFrame:
     return registration_stripped
 
 
-def create_database_riders(registration: pd.DataFrame):
+def create_database_riders(registration: pd.DataFrame, rider_db_handler = RidersDbHandler()):
     """
     create the database riders.db
     Keyword arguments:
         registration: dataframe with registration data
     """
 
-    rider_db_handler = RiderDbHandler()
-    rider_db_handler.create_table()
     df_riders = registration[["name", "gender", "date_of_birth", "age", "club"]]
-
-    def lambda_age_at_competition(df):
-        return df["date_of_birth"].apply(
-            lambda date_of_birth: calculate_age(date_of_birth, DATE_COMPETITION)
-        )
-
-    df_riders.assign(age=lambda_age_at_competition)
+    df_riders.assign(age=df_riders["date_of_birth"].apply(
+            lambda date_of_birth: calculate_age(date_of_birth, DATE_COMPETITION)))
     sql_insert = """INSERT INTO riders (name, gender, date_of_birth, age_competition_day, club) VALUES (? , ? , ? , ? , ?) """
-    print("type itertuples rider", df_riders.itertuples(index=False, name=None))
     rider_db_handler.execute(sql_insert, df_riders.itertuples(index=False, name=None))
 
 
-def create_database_routines(registration: pd.DataFrame):
+def create_database_routines(registration: pd.DataFrame,riders_db_handler: RidersDbHandler(),  routines_db_handler: RoutinesDbHandler(), riders_routines_db_handler = RidersRoutinesDbHandler()
+                             ):
     """
     create the databases routines.db and riders_routines.db
     Keyword arguments:
         registration: dataframe with registration data
     """
-
-    routines_db_handler = RoutinesDbHandler()
-    routines_db_handler.create_table()
-
-    riders_routines_db_handler = RidersRoutinesDbHandler()
-    riders_routines_db_handler.create_table()
-
-    riders_db_handler = RiderDbHandler()
 
     for category in CATEGORIES:
         for age_group in set(
@@ -129,7 +114,7 @@ def create_database_routines(registration: pd.DataFrame):
                     ),
                 )
                 routines_db_handler.execute(sql_insert, data)
-                id_routine = routines_db_handler.last_row_id()
+                id_routine = routines_db_handler.cursor.lastrowid
                 # get riders of routine
                 name_riders = (
                     registration[["name", "date_of_birth"]]
@@ -166,43 +151,30 @@ def create_database_routines(registration: pd.DataFrame):
                 )
                 riders_routines_db_handler.execute(sql_insert, data)
 
-    riders_routines_db_handler.db_connection.commit()
-    riders_routines_db_handler.disconnect()
-    riders_db_handler.disconnect()
-    routines_db_handler.disconnect()
 
 
-def split_individual_male_female():
+def split_individual_male_female(riders_db_handler:RidersDbHandler, routines_db_handler: RidersDbHandler, riders_routines_db_handler : RidersRoutinesDbHandler()):
     """
     split the category individual into individual female and individual male
     """
-    # script_dir = os.path.dirname(os.path.abspath(__file__))
-    # unicycle_score_board_path = Path(script_dir).parent.parent
 
-    dataloader_routines = DataLoader(
-        Path(UNICYCLE_SCORE_BOARD_PATH, "data/routines.db"), "routines"
-    )
-    df_routines = dataloader_routines.get_data(
-        """SELECT id_routine, category FROM routines WHERE category == 'individual'"""
-    )
-    df_riders = DataLoader(
-        Path(UNICYCLE_SCORE_BOARD_PATH, "data/riders.db"), "riders"
-    ).get_data("""SELECT id_rider, gender FROM riders""")
-    df_riders_routines = DataLoader(
-        Path(UNICYCLE_SCORE_BOARD_PATH, "data/riders_routines.db"), "riders_routines"
-    ).get_data()
+    df_riders = riders_db_handler.get_data("""SELECT id_rider, gender FROM riders""")
+    df_routines = routines_db_handler.get_data("""SELECT id_routine, category FROM routines WHERE category == 'individual'""")
+    df_riders_routines = riders_routines_db_handler.get_data()
 
     df_individual = df_riders_routines.merge(
         df_riders, on="id_rider", how="left"
     ).merge(df_routines, on="id_routine", how="right")
+
     df_individual["category"] = df_individual["category"].where(
         df_individual["gender"] != "m", "individual male"
     )
+
     df_individual["category"] = df_individual["category"].where(
         df_individual["gender"] != "w", "individual female"
     )
 
-    dataloader_routines.update_multiple_rows(
+    routines_db_handler.update_multiple_rows(
         df_individual, ["id_routine"], ["category"]
     )
 
@@ -213,8 +185,6 @@ def check_age_groups(age_groups: dict):
     If not the age group will be corrected
 
     """
-    # script_dir = os.path.dirname(os.path.abspath(__file__))
-    # unicycle_score_board_path = Path(script_dir).parent.parent
 
     dataloader_routines = DataLoader(
         Path(UNICYCLE_SCORE_BOARD_PATH, "data/routines.db"), "routines"
@@ -373,17 +343,25 @@ def main():
             "data/registration_files/Anmeldung_Landesmeisterschaft_2025_Verein1.xlsx",
         )
     ]
+    riders_db_handler = RidersDbHandler()
+    routines_db_handler = RoutinesDbHandler()
+    riders_routines_db_handler = RidersRoutinesDbHandler()
+
+    riders_db_handler.create_table()
+    routines_db_handler.create_table()
+    riders_routines_db_handler.create_table()
+
     for file in registration_files:
         registration = read_registration_file(
             path=Path(UNICYCLE_SCORE_BOARD_PATH, file)
         )
-        create_database_riders(registration)
-        create_database_routines(registration)
+        create_database_riders(registration, riders_db_handler)
+        create_database_routines(registration, riders_db_handler, routines_db_handler, riders_routines_db_handler)
 
-    # split_individual_male_female()
+    split_individual_male_female(riders_db_handler, routines_db_handler,riders_routines_db_handler)
 
 
-"""
+
     age_groups = {
         "individual male": ["U9", "U11", "U13", "U15", "15+"],
         "individual female": ["U9", "U11", "U13", "U15", "15+"],
@@ -391,9 +369,14 @@ def main():
         "small_group": ["U15", "15+"],
         "large_group": ["U12", "12+"],
     }
-    check_age_groups(age_groups)
-    create_starting_order(age_groups)
 
-"""
+    #check_age_groups(age_groups)
+    #create_starting_order(age_groups)
+
+    riders_routines_db_handler.disconnect()
+    riders_db_handler.disconnect()
+    routines_db_handler.disconnect()
+
+
 if __name__ == "__main__":
     main()
