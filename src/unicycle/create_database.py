@@ -1,22 +1,14 @@
-import datetime
 import string
 
 import pandas as pd
-import os
 
 from pandas import DataFrame
-from pathlib import Path
 
+from src.unicycle.constants import *
 from src.unicycle.functions import calculate_age
 from src.unicycle.riders_db_handler import RidersDbHandler
 from src.unicycle.routines_db_handler import RoutinesDbHandler
 from src.unicycle.riders_routines_db_handler import RidersRoutinesDbHandler
-
-
-DATE_COMPETITION = datetime.datetime(2026, 3, 7, 0, 0)
-CATEGORIES = ["individual", "pair", "small_group", "large_group"]
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-UNICYCLE_SCORE_BOARD_PATH = Path(SCRIPT_DIR).parent.parent
 
 
 def read_registration_file(path: Path) -> pd.DataFrame:

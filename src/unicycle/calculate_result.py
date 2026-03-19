@@ -108,4 +108,5 @@ def create_judges():
 # judges = create_judges()
 # print(judges['single'])
 judges = create_judges()
+print(judges)
 calculate_result("individual female", "U11", judges)
