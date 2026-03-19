@@ -13,45 +13,52 @@ class DataLoader:
         self.db_path = db_path
         self.table_name = table_name
 
-    def get_data(self, sql_query: str = None, par=None) -> pd.DataFrame:
+    def get_data(self, sql_query: str = None) -> pd.DataFrame:
+        """Load data from the configured SQLite table.
+
+        :param str sql_query: Optional SQL query. If omitted, all rows from the
+            configured table are loaded.
+        :return pd.DataFrame: Loaded table data or an empty dataframe if the
+            table does not exist yet.
         """
-        Load data from a SQLite database into a pandas DataFrame.
-
-        Parameters
-        ----------
-        sql_query : str, optional
-        SQL SELECT query to execute.
-        If None, defaults to:
-        ``SELECT * FROM {self.table_name}``
-
-        par : sequence or mapping, optional
-            Parameters to bind to the SQL query.
-            - Use a sequence (tuple/list) for ``?`` placeholders
-            - Use a mapping (dict) for ``:name`` placeholders
-
-        Returns
-        -------
-        pd.DataFrame containing the query results.
-        Returns an empty DataFrame if the query fails.
-        """
-
-        if sql_query == None:
-            sql_query = f"SELECT * FROM {self.table_name}"
+        conn = None
         try:
             conn = sqlite3.connect(self.db_path)
-            df = pd.read_sql_query(sql_query, con=conn, params=par)
-            conn.close()
+
+            if sql_query is None:
+                sql_query = f"SELECT * FROM {self.table_name}"
+
+            df = pd.read_sql_query(sql_query, conn)
             return df
+
         except Exception as e:
+            if "no such table" in str(e).lower():
+                return pd.DataFrame()
+
             print(f"❌ Failed to load data from {self.table_name}: {e}")
             return pd.DataFrame()
 
-    def update_data(self, df: pd.DataFrame):
+        finally:
+            if conn is not None:
+                conn.close()
+
+    def update_data(self, df: pd.DataFrame, columns: list[str] = None):
+        """Write dataframe contents to the configured SQLite table.
+
+        :param pd.DataFrame df: Data to write into the table.
+        :param list[str] columns: Optional list of allowed columns to persist.
+            If provided, only these columns are written.
+        :return None: Writes the dataframe to the database table.
+        """
         try:
+            if columns is not None:
+                df = df[[col for col in columns if col in df.columns]].copy()
+
             conn = sqlite3.connect(self.db_path)
             df.to_sql(self.table_name, conn, if_exists="replace", index=False)
             conn.close()
             print(f"✅ {self.table_name} updated successfully.")
+
         except Exception as e:
             print(f"❌ Error writing to {self.table_name}: {e}")
 

@@ -12,7 +12,7 @@ from pathlib import Path
 from load_data import DataLoader
 
 BASE_COLS_PARTICIPANT = ["routine_name", "names", "age_group", "category"]
-BASE_COLS_JURY = ["routine_name", "age_group", "category"]
+BASE_COLS_JURY = ["id_routine", "routine_name", "age_group", "category"]
 
 T_SUBS = ["Q", "M", "D"]
 P_SUBS = ["P", "C", "I"]
@@ -24,6 +24,7 @@ D_COLS = [f"D{i}_{s}" for i in range(1, 5) for s in D_SUBS]
 
 TP_SUBCOLS = T_COLS + P_COLS
 SCORE_COLS = TP_SUBCOLS + D_COLS
+COLS_TO_SAVE = ["id_routine"] + SCORE_COLS + ["Gesamtpunkte"]
 
 COLUMN_LABELS = {
     "routine_name": "Kür-Name",
@@ -409,16 +410,29 @@ class Dashboard:
             df_routines = DataLoader(
                 self._db_path("routines.db"), "routines"
             ).get_data()
+
             df_points = DataLoader(
                 self._db_path("points.db"), "points"
             ).get_data()
 
             if df_points.empty:
-                df_points = pd.DataFrame(columns=BASE_COLS_JURY)
+                df_points = pd.DataFrame(
+                    columns=COLS_TO_SAVE
+                )
 
-            df = df_routines.merge(df_points, on=BASE_COLS_JURY, how="left")
+            df = df_routines.merge(
+                df_points,
+                on="id_routine",
+                how="left",
+                suffixes=("", "_points"),
+            )
 
-            for col in ordered_cols:
+            for col in ["routine_name", "age_group", "category"]:
+                points_col = f"{col}_points"
+                if points_col in df.columns:
+                    df = df.drop(columns=points_col)
+
+            for col in SCORE_COLS:
                 if col not in df.columns:
                     df[col] = np.nan
 
@@ -488,6 +502,9 @@ class Dashboard:
         for col in ordered_cols:
 
             if col not in df.columns:
+                continue
+
+            if col == "id_routine":
                 continue
 
             if col in SCORE_COLS:
@@ -798,17 +815,18 @@ class Dashboard:
                 ).get_data()
                 df_display = df_riders2routines.merge(
                     df_riders, on="id_rider", how="left"
+                ).merge(
+                    df_routines, on="id_routine", how="left"
                 )
-                df_display = df_display.merge(df_routines, on="id_routine", how="left")
-                df_display = (
-                    (
-                        df_display.groupby(["id_routine"], as_index=False).agg(
-                            names=("name", lambda x: ", ".join(x))
-                        )  # problem bei gleichem Kürnamen
-                    )
-                    .merge(df_routines, on="id_routine", how="left")
-                    .drop(columns="id_routine")
+
+                df_display = df_display.groupby("id_routine", as_index=False).agg(
+                    routine_name=("routine_name", "first"),
+                    category=("category", "first"),
+                    age_group=("age_group", "first"),
+                    names=("name", lambda x: ", ".join(x.dropna().astype(str))),
                 )
+
+                df_display = df_display.drop(columns="id_routine")
                 def format_names(row):
                     """Format the 'names' column for participant display.
 
@@ -843,18 +861,18 @@ class Dashboard:
 
         @self.app.callback(
             Output("data-table", "data", allow_duplicate=True),
-            Input("data-table", "data"),
+            Input("data-table", "data_timestamp"),
             State("data-table", "data"),
             prevent_initial_call=True,
         )
-        def update_points(rows, current_state):
+        def update_points(timestamp, rows):
             """Validate edited scores, recompute totals, and persist to database.
 
+            :param int timestamp: Timestamp of the latest table edit.
             :param list[dict] rows: Updated table rows from DataTable.
-            :param list[dict] current_state: Previous table state (unused).
             :return list[dict]: Updated table data with clamped values and totals.
             """
-            if not rows:
+            if timestamp is None or not rows:
                 raise dash.exceptions.PreventUpdate
 
             df = pd.DataFrame(rows)
@@ -863,12 +881,17 @@ class Dashboard:
                 if col not in df.columns:
                     df[col] = np.nan
 
-            # clamp judge values between 0 and 10 (D3 and D4 between 0 and 999)
             def clamp_cell(value, category, colname):
+                """Clamp a score cell to the allowed value range.
 
-                LOCKED = {"individual female", "individual male", "pair"}
+                :param object value: Raw edited cell value.
+                :param str category: Routine category of the current row.
+                :param str colname: Name of the score column.
+                :return object: Validated numeric value, NaN, or "–" for locked cells.
+                """
+                locked = {"individual female", "individual male", "pair"}
 
-                if colname.startswith(("D3_", "D4_")) and category in LOCKED:
+                if colname.startswith(("D3_", "D4_")) and category in locked:
                     return "–"
 
                 if value == "–":
@@ -876,7 +899,7 @@ class Dashboard:
 
                 try:
                     v = float(value)
-                except:
+                except Exception:
                     return np.nan
 
                 if v < 0:
@@ -892,7 +915,6 @@ class Dashboard:
 
                 return v
 
-            # Apply clamping per-row and per-scoring column
             if "category" not in df.columns:
                 df["category"] = None
 
@@ -901,27 +923,31 @@ class Dashboard:
                     lambda r: clamp_cell(r.get(col), r.get("category"), col), axis=1
                 )
 
-            # recompute total
             def compute_total(row):
+                """Compute total score for one row.
+
+                :param pd.Series row: One scoring row.
+                :return float: Sum of all valid score values.
+                """
                 total = 0
                 for col in SCORE_COLS:
                     val = row.get(col)
                     if val == "–" or pd.isna(val):
-                        total += 0
-                    else:
-                        try:
-                            total += float(val)
-                        except:
-                            total += 0
+                        continue
+                    try:
+                        total += float(val)
+                    except Exception:
+                        pass
                 return total
 
             df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
 
-            # save to points.db
+            columns_to_save = ["id_routine"] + SCORE_COLS + ["Gesamtpunkte"]
+
             try:
                 DataLoader(
                     self._db_path("points.db"), "points"
-                ).update_data(df)
+                ).update_data(df, columns=columns_to_save)
             except Exception as e:
                 print("Error saving points:", e)
 
