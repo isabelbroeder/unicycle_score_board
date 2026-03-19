@@ -7,7 +7,6 @@ import dash_bootstrap_components as dbc
 import dash_daq as daq
 import json
 import numpy as np
-import os
 import pandas as pd
 from pathlib import Path
 from load_data import DataLoader
@@ -71,14 +70,33 @@ JUDGE_LEGEND = {
     },
 }
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-config_path = os.path.join(script_dir, "config.json")
-unicycle_score_board_path = Path(script_dir).parent.parent
-with open(config_path, "r") as f:
-    CONFIG = json.load(f)
+def get_project_paths():
+    """Construct and return important project-related filesystem paths.
 
-STORED_HASH: object = CONFIG["jury_password_hash"].encode()
+    Paths are resolved relative to the current file location using __file__,
+    ensuring stable behavior regardless of the working directory.
 
+    :return Paths: Dataclass containing script directory, config file path,
+        and project root directory.
+    """
+    script_dir = Path(__file__).resolve().parent
+    project_root = script_dir.parent.parent
+
+    return {
+        "script_dir": script_dir,
+        "config_path": script_dir / "config.json",
+        "project_root": project_root,
+    }
+
+
+def load_config(config_path: Path):
+    """Load application configuration from a JSON file.
+
+    :param Path config_path: Path to the configuration JSON file.
+    :return dict: Parsed configuration data as a dictionary.
+    """
+    with config_path.open("r", encoding="utf-8") as f:
+        return json.load(f)
 
 class Dashboard:
     """Main application class for the unicycle scoring dashboard.
@@ -95,6 +113,9 @@ class Dashboard:
             suppress_callback_exceptions=True,
             external_stylesheets=[dbc.themes.DARKLY],
         )
+        self.paths = get_project_paths()
+        self.config = load_config(self.paths["config_path"])
+        self.stored_hash = self.config["jury_password_hash"].encode()
 
         # --- Themes ---
         self.LIGHT_THEME = {
@@ -119,6 +140,15 @@ class Dashboard:
         # --- Layout ---
         self.app.layout = self._build_layout()
         self._register_callbacks()
+
+    # ----------------- Path -----------------
+    def _db_path(self, name: str):
+        """Return the path to a database file located in the project's data folder.
+
+        :param str name: Name of the database file (e.g., "points.db").
+        :return Path: Path object pointing to the requested database file.
+        """
+        return self.paths["project_root"] / "data" / name
 
     # ----------------- UI -----------------
     def _build_layout(self):
@@ -377,10 +407,10 @@ class Dashboard:
 
         if jury_mode:
             df_routines = DataLoader(
-                Path(unicycle_score_board_path, "data/routines.db"), "routines"
+                self._db_path("routines.db"), "routines"
             ).get_data()
             df_points = DataLoader(
-                Path(unicycle_score_board_path, "data/points.db"), "points"
+                self._db_path("points.db"), "points"
             ).get_data()
 
             if df_points.empty:
@@ -605,7 +635,7 @@ class Dashboard:
                 raise dash.exceptions.PreventUpdate
             button_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-            correct_password_hash = STORED_HASH
+            correct_password_hash = self.stored_hash
 
             if button_id == "view-switch-btn":
                 if has_access:
@@ -741,7 +771,7 @@ class Dashboard:
 
             if jury_mode:
                 df_routines = DataLoader(
-                    Path(unicycle_score_board_path, "data/routines.db"), "routines"
+                    self._db_path("routines.db"), "routines"
                 ).get_data()
                 title = "⚖️ Jury Übersicht"
                 button_text = "👥 Wechsel zu Teilnehmer Ansicht"
@@ -755,15 +785,15 @@ class Dashboard:
                 ])
             else:
                 df_riders = DataLoader(
-                    Path(unicycle_score_board_path, "data/riders.db"), "riders"
+                    self._db_path("riders.db"), "riders"
                 ).get_data(sql_query="SELECT id_rider,name,club FROM riders")
                 df_routines = DataLoader(
-                    Path(unicycle_score_board_path, "data/routines.db"), "routines"
+                    self._db_path("routines.db"), "routines"
                 ).get_data(
                     sql_query="SELECT id_routine,routine_name,category,age_group FROM routines"
                 )
                 df_riders2routines = DataLoader(
-                    Path(unicycle_score_board_path, "data/riders_routines.db"),
+                    self._db_path("riders_routines.db"),
                     "riders_routines",
                 ).get_data()
                 df_display = df_riders2routines.merge(
@@ -890,7 +920,7 @@ class Dashboard:
             # save to points.db
             try:
                 DataLoader(
-                    Path(unicycle_score_board_path, "data/points.db"), "points"
+                    self._db_path("points.db"), "points"
                 ).update_data(df)
             except Exception as e:
                 print("Error saving points:", e)
