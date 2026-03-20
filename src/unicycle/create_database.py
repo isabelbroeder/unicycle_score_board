@@ -6,6 +6,7 @@ from pandas import DataFrame
 
 from src.unicycle.constants import *
 from src.unicycle.functions import calculate_age
+from src.unicycle.points_db_handler import PointsDbHandler
 from src.unicycle.riders_db_handler import RidersDbHandler
 from src.unicycle.routines_db_handler import RoutinesDbHandler
 from src.unicycle.riders_routines_db_handler import RidersRoutinesDbHandler
@@ -145,6 +146,23 @@ def fill_database_routines(registration: pd.DataFrame,
                     )
                 )
                 riders_routines_db_handler.execute(sql_insert, data)
+
+def fill_database_points(routines_db_handler: RoutinesDbHandler = RoutinesDbHandler(), points_db_handler: PointsDbHandler = PointsDbHandler()):
+    #tp_columns = " REAL,\n".join(TP_SUBCOLS) + " REAL"
+    #d_columns = " INTEGER,\n".join(D_COLS) + " INTEGER"
+
+    #routines_db_handler = RoutinesDbHandler()
+    #if not routines_db_handler.is_connected:
+    #    routines_db_handler.connect()
+
+    id_routine = routines_db_handler.get_data("""SELECT id_routine FROM routines""")
+    id_routine_str = [f"({val})" for val in id_routine['id_routine'].values]
+    id_routine_str = ", ".join(id_routine_str)
+    print(id_routine_str)
+    SQL_INSERT_KEYS = f"INSERT INTO points (id_routine) VALUES {id_routine_str};"
+    print(SQL_INSERT_KEYS)
+
+    points_db_handler.execute(SQL_INSERT_KEYS)
 
 
 def split_individual_male_female(riders_db_handler: RidersDbHandler = RidersDbHandler(),
@@ -330,10 +348,13 @@ def main():
     riders_db_handler = RidersDbHandler()
     routines_db_handler = RoutinesDbHandler()
     riders_routines_db_handler = RidersRoutinesDbHandler()
+    points_db_handler = PointsDbHandler()
 
     riders_db_handler.create_table()
     routines_db_handler.create_table()
     riders_routines_db_handler.create_table()
+    points_db_handler.create_table()
+
 
     for file in registration_files:
         registration = read_registration_file(
@@ -341,7 +362,7 @@ def main():
         )
         fill_database_riders(registration)
         fill_database_routines(registration)
-
+    fill_database_points(routines_db_handler, points_db_handler)
     split_individual_male_female()
 
     age_groups = {
@@ -358,6 +379,7 @@ def main():
     riders_routines_db_handler.disconnect()
     riders_db_handler.disconnect()
     routines_db_handler.disconnect()
+    points_db_handler.disconnect()
 
 
 if __name__ == "__main__":
