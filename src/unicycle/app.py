@@ -24,14 +24,29 @@ D_COLS = [f"D{i}_{s}" for i in range(1, 5) for s in D_SUBS]
 
 TP_SUBCOLS = T_COLS + P_COLS
 SCORE_COLS = TP_SUBCOLS + D_COLS
-COLS_TO_SAVE = ["id_routine"] + SCORE_COLS + ["Gesamtpunkte"]
+TOTAL_COL = "Ergebnis"
+COLS_TO_SAVE = ["id_routine"] + SCORE_COLS + ["Ergebnis"]
+
+ROUTINE_RESULT_WEIGHTS = {"T": 0.45, "P": 0.45, "D": 0.10}
+
+EMPTY_SCORE = "–"
+LOCKED_D_JUDGE_COLS = ["D3", "D4"]
+LOCKED_D_CATEGORIES = ["individual", "pair"]
+
+MIN_SCORE = 0
+MAX_D_SCORE = 999
+MAX_TP_SCORE = 10
+
+CATEGORY_COL = "category"
+POINTS_DB_NAME = "points.db"
+POINTS_TABLE_NAME = "points"
 
 COLUMN_LABELS = {
     "routine_name": "Kür-Name",
     "names": "Namen*",
     "age_group": "Altersklasse",
     "category_label": "Kategorie",
-    "Gesamtpunkte": "Gesamtpunkte",
+    "Ergebnis": "Ergebnis",
 }
 
 CATEGORY_LABELS = {
@@ -49,6 +64,34 @@ CATEGORY_ORDER = [
     "Kleingruppe",
     "Großgruppe",
 ]
+
+CATEGORY_JUDGES = {
+    "individual female": {
+        "T": ["T1", "T2", "T3", "T4"],
+        "P": ["P1", "P2", "P3", "P4"],
+        "D": ["D1", "D2"],
+    },
+    "individual male": {
+        "T": ["T1", "T2", "T3", "T4"],
+        "P": ["P1", "P2", "P3", "P4"],
+        "D": ["D1", "D2"],
+    },
+    "pair": {
+        "T": ["T1", "T2", "T3", "T4"],
+        "P": ["P1", "P2", "P3", "P4"],
+        "D": ["D1", "D2"],
+    },
+    "small_group": {
+        "T": ["T1", "T2", "T3", "T4"],
+        "P": ["P1", "P2", "P3", "P4"],
+        "D": ["D1", "D2", "D3", "D4"],
+    },
+    "large_group": {
+        "T": ["T1", "T2", "T3", "T4"],
+        "P": ["P1", "P2", "P3", "P4"],
+        "D": ["D1", "D2", "D3", "D4"],
+    },
+}
 
 JUDGE_LEGEND = {
 
@@ -385,6 +428,139 @@ class Dashboard:
             ]
         )
 
+    def _apply_locked_d_judges(self, df):
+        """Lock D3/D4 judges for non-group categories by setting values to "–".
+
+        :param pd.DataFrame df: Dataframe containing all routine scores.
+        :return pd.DataFrame: Updated dataframe with D3/D4 cleared where not allowed.
+        """
+        df = df.copy()
+        locked_categories = {"individual female", "individual male", "pair"}
+
+        if "category" not in df.columns:
+            return df
+
+        for category in locked_categories:
+            mask = df["category"] == category
+            for sub in D_SUBS:
+                df.loc[mask, f"D3_{sub}"] = "–"
+                df.loc[mask, f"D4_{sub}"] = "–"
+
+        return df
+
+    def _coerce_score_columns(self, df):
+        """Convert score columns to numeric values, treating "–" as missing.
+
+        :param pd.DataFrame df: Dataframe containing routine scores.
+        :return pd.DataFrame: Dataframe with score columns converted to numeric dtype.
+        """
+        df = df.copy()
+
+        for col in SCORE_COLS:
+            if col not in df.columns:
+                df[col] = np.nan
+            df[col] = pd.to_numeric(df[col].replace("–", np.nan), errors="coerce")
+
+        return df
+
+    def calculate_result(self, df_points, category, age_group):
+        """Calculate normalized routine results for one category and age group.
+
+        Scores are summed per judge, converted to percentages across all routines,
+        averaged per domain (T, P, D), and combined into Ergebnis using weights.
+
+        :param pd.DataFrame df_points: Full dataframe containing all routines and scores.
+        :param str category: Routine category (e.g. individual, pair, group).
+        :param str age_group: Age group of the routines.
+        :return pd.DataFrame: Result dataframe indexed by id_routine with columns
+            T, P, D, Ergebnis.
+        """
+        category_judges = CATEGORY_JUDGES.get(category)
+        if not category_judges:
+            return pd.DataFrame(columns=["T", "P", "D", "Ergebnis"])
+
+        group_df = df_points[
+            (df_points["category"] == category) & (df_points["age_group"] == age_group)
+        ].copy()
+
+        if group_df.empty:
+            return pd.DataFrame(columns=["T", "P", "D", "Ergebnis"])
+
+        group_df = self._apply_locked_d_judges(group_df)
+        group_df = self._coerce_score_columns(group_df)
+        group_df = group_df.set_index("id_routine", drop=True)
+
+        per_judge = pd.DataFrame(index=group_df.index)
+
+        for judge_domain in ["T", "P", "D"]:
+            for judge in category_judges[judge_domain]:
+                judge_columns = [
+                    col for col in group_df.columns if col.startswith(f"{judge}_")
+                ]
+                if judge_columns:
+                    per_judge[judge] = group_df[judge_columns].sum(axis=1, skipna=True)
+
+        percentage_per_routine_per_judge = per_judge.copy()
+        for judge in percentage_per_routine_per_judge.columns:
+            judge_total = percentage_per_routine_per_judge[judge].sum()
+            if pd.isna(judge_total) or judge_total == 0:
+                percentage_per_routine_per_judge[judge] = 0.0
+            else:
+                percentage_per_routine_per_judge[judge] = (
+                    percentage_per_routine_per_judge[judge] / judge_total
+                )
+
+        result = pd.DataFrame(index=group_df.index, columns=["T", "P", "D", "Ergebnis"])
+
+        for judge_domain in ["T", "P", "D"]:
+            relevant_judges = [
+                judge
+                for judge in category_judges[judge_domain]
+                if judge in percentage_per_routine_per_judge.columns
+            ]
+            if relevant_judges:
+                result[judge_domain] = percentage_per_routine_per_judge[relevant_judges].mean(axis=1)
+            else:
+                result[judge_domain] = 0.0
+
+        result["Ergebnis"] = (
+            result["T"] * ROUTINE_RESULT_WEIGHTS["T"]
+            + result["P"] * ROUTINE_RESULT_WEIGHTS["P"]
+            + result["D"] * ROUTINE_RESULT_WEIGHTS["D"]
+        )*100
+
+        return result
+
+    def recalculate_all_results(self, df):
+        """Recalculate results for all routines grouped by category and age group.
+
+        :param pd.DataFrame df: Dataframe containing all routines and scores.
+        :return pd.DataFrame: Updated dataframe with recalculated result columns.
+        """
+        df = df.copy()
+
+        result_cols = ["T", "P", "D", "Ergebnis"]
+        for col in result_cols:
+            if col not in df.columns:
+                df[col] = np.nan
+            df[col] = pd.to_numeric(df[col], errors="coerce").astype(float)
+
+        for (category, age_group), _ in df.groupby(["category", "age_group"], dropna=False):
+            result_df = self.calculate_result(df, category, age_group)
+            if result_df.empty:
+                continue
+
+            result_df = result_df.astype(float).round(2)
+
+            for routine_id, values in result_df.iterrows():
+                mask = df["id_routine"] == routine_id
+                df.loc[mask, "T"] = values["T"]
+                df.loc[mask, "P"] = values["P"]
+                df.loc[mask, "D"] = values["D"]
+                df.loc[mask, "Ergebnis"] = values["Ergebnis"]
+
+        return df
+
     def _datatable(self, df: pd.DataFrame, theme, editable=False, jury_mode=False):
         """Create a Dash DataTable configured for participant or jury mode.
 
@@ -404,7 +580,7 @@ class Dashboard:
         dropdown = {}
 
         base_cols = BASE_COLS_JURY if jury_mode else BASE_COLS_PARTICIPANT
-        ordered_cols = base_cols + T_COLS + P_COLS + D_COLS + ["Gesamtpunkte"]
+        ordered_cols = base_cols + T_COLS + P_COLS + D_COLS + ["Ergebnis"]
 
         if jury_mode:
             df_routines = DataLoader(
@@ -416,9 +592,7 @@ class Dashboard:
             ).get_data()
 
             if df_points.empty:
-                df_points = pd.DataFrame(
-                    columns=COLS_TO_SAVE
-                )
+                df_points = pd.DataFrame(columns=COLS_TO_SAVE)
 
             df = df_routines.merge(
                 df_points,
@@ -432,57 +606,13 @@ class Dashboard:
                 if points_col in df.columns:
                     df = df.drop(columns=points_col)
 
+            df = self._apply_locked_d_judges(df)
+
             for col in SCORE_COLS:
                 if col not in df.columns:
                     df[col] = np.nan
 
-            def set_uneditable_judges(row):
-                """Disable D3 and D4 scoring for non-group categories.
-
-                :param pd.Series row: Routine dataframe row.
-                :return pd.Series: Modified row with D3/D4 replaced by '–'.
-                """
-                cat = row["category"]
-                if cat in ["individual female", "individual male", "pair"]:
-                    for sub in D_SUBS:
-                        row[f"D3_{sub}"] = "–"
-                        row[f"D4_{sub}"] = "–"
-                return row
-
-            df = df.apply(set_uneditable_judges, axis=1)
-
-            # calculation of all points per row ("–" = 0)
-            def compute_total(row):
-                """Compute total score across all judge columns.
-
-                :param pd.Series row: Scoring dataframe row.
-                :return float: Sum of all valid numeric score values.
-                """
-                total = 0
-
-                for col in TP_SUBCOLS:
-                    val = row.get(col)
-                    if val == "–" or pd.isna(val):
-                        continue
-                    try:
-                        total += float(val)
-                    except Exception:
-                        pass
-
-                for col in D_COLS:
-                    if col not in row:
-                        continue
-                    val = row[col]
-                    if val == "–" or pd.isna(val):
-                        continue
-                    try:
-                        total += float(val)
-                    except Exception:
-                        pass
-
-                return total
-
-            df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
+            df = self.recalculate_all_results(df)
 
         if "category" in df.columns:
             df["category_label"] = (
@@ -510,7 +640,7 @@ class Dashboard:
             if col in SCORE_COLS:
                 columns.append(self._judge_column(col, jury_mode))
 
-            elif col == "Gesamtpunkte":
+            elif col == "Ergebnis":
                 columns.append({
                     "name": ["", COLUMN_LABELS.get(col, col)],
                     "id": col,
@@ -570,7 +700,7 @@ class Dashboard:
                     "textAlign": "center",
                 },
                 {
-                    "if": {"column_id": "Gesamtpunkte"},
+                    "if": {"column_id": "Ergebnis"},
                     "textAlign": "right",
                     "fontWeight": "bold",
                 },
@@ -881,68 +1011,88 @@ class Dashboard:
                 if col not in df.columns:
                     df[col] = np.nan
 
-            def clamp_cell(value, category, colname):
-                """Clamp a score cell to the allowed value range.
+            def _is_locked_d_judge(category, colname):
+                """Check whether a D judge column is locked for a given category.
 
-                :param object value: Raw edited cell value.
-                :param str category: Routine category of the current row.
+                :param str category: Category of the routine.
                 :param str colname: Name of the score column.
-                :return object: Validated numeric value, NaN, or "–" for locked cells.
+                :return bool: True if the column is locked for the category.
                 """
-                locked = {"individual female", "individual male", "pair"}
+                return (
+                        colname in LOCKED_D_JUDGE_COLS
+                        and category in LOCKED_D_CATEGORIES
+                )
 
-                if colname.startswith(("D3_", "D4_")) and category in locked:
-                    return "–"
+            def _parse_score_value(value):
+                """Convert a score input to float if possible.
 
-                if value == "–":
-                    return "–"
+                :param Any value: Raw cell value from the table.
+                :return float | str | float("nan"): Parsed score, EMPTY_SCORE, or NaN.
+                """
+                if value == EMPTY_SCORE:
+                    return EMPTY_SCORE
 
                 try:
-                    v = float(value)
-                except Exception:
+                    return float(value)
+                except (TypeError, ValueError):
                     return np.nan
 
-                if v < 0:
+            def _validate_d_score(value):
+                """Validate a D score.
+
+                :param float value: Parsed numeric score.
+                :return int | float("nan"): Validated integer D score or NaN.
+                """
+                if value < MIN_SCORE:
                     return np.nan
+                if value > MAX_D_SCORE or not value.is_integer():
+                    return np.nan
+                return int(value)
+
+            def _validate_tp_score(value):
+                """Validate a technical or performance score.
+
+                :param float value: Parsed numeric score.
+                :return float | float("nan"): Validated score or NaN.
+                """
+                if value < MIN_SCORE:
+                    return np.nan
+                if value > MAX_TP_SCORE:
+                    return np.nan
+                return value
+
+            def clamp_cell(value, category, colname):
+                """Validate and normalize a score cell value.
+
+                :param Any value: Raw cell value.
+                :param str category: Category of the routine.
+                :param str colname: Name of the score column.
+                :return str | int | float | float("nan"): Normalized score value.
+                """
+                if _is_locked_d_judge(category, colname):
+                    return EMPTY_SCORE
+
+                parsed_value = _parse_score_value(value)
+                if parsed_value == EMPTY_SCORE or pd.isna(parsed_value):
+                    return parsed_value
 
                 if colname in D_COLS:
-                    if v > 999 or not v.is_integer():
-                        return np.nan
-                    return int(v)
+                    return _validate_d_score(parsed_value)
 
-                if v > 10:
-                    return np.nan
+                return _validate_tp_score(parsed_value)
 
-                return v
-
-            if "category" not in df.columns:
-                df["category"] = None
+            if CATEGORY_COL not in df.columns:
+                df[CATEGORY_COL] = None
 
             for col in SCORE_COLS:
                 df[col] = df.apply(
-                    lambda r: clamp_cell(r.get(col), r.get("category"), col), axis=1
+                    lambda row: clamp_cell(row.get(col), row.get(CATEGORY_COL), col),
+                    axis=1,
                 )
 
-            def compute_total(row):
-                """Compute total score for one row.
+            df = self.recalculate_all_results(df)
 
-                :param pd.Series row: One scoring row.
-                :return float: Sum of all valid score values.
-                """
-                total = 0
-                for col in SCORE_COLS:
-                    val = row.get(col)
-                    if val == "–" or pd.isna(val):
-                        continue
-                    try:
-                        total += float(val)
-                    except Exception:
-                        pass
-                return total
-
-            df["Gesamtpunkte"] = df.apply(compute_total, axis=1)
-
-            columns_to_save = ["id_routine"] + SCORE_COLS + ["Gesamtpunkte"]
+            columns_to_save = ["id_routine"] + SCORE_COLS + ["Ergebnis"]
 
             try:
                 DataLoader(
