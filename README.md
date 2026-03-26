@@ -38,15 +38,15 @@ We strongly suggest to use a python interpreter (preferably PyCharm, because the
     <img src="images/console-link.png" width="1810" alt="">
 
 
-3. The dashboard opens with the participant overview as the default page.
+3. The dashboard opens with the participant overview as the default page. Below the table header is a filter included, where every column can be filtered individually. (The same filter can be used in the jury view.)
 
 
-4. Use the switch in the top left corner to toggle between dark and light mode.
+4. You can use the switch in the top left corner to toggle between dark and light mode.
 
     <img src="images/switch-dark.png" width="100" alt=""> <img src="images/switch-light.png" width="100" alt="">
 
 
-5. Click the "Jury Ansicht" button in the top right corner. Enter the password in the popup window.
+5. Click the "Jury Ansicht" button in the top right corner. Enter the password in the popup window. The password is `test`. (We know, very creative...)
 
     <img src="images/password.png" width="300" alt="">
 
@@ -82,7 +82,7 @@ We strongly suggest to use a python interpreter (preferably PyCharm, because the
 
 ## Further Ideas
 
-With more time, the following ideas could have been considered as well:
+With even more time, the following ideas could have been considered as well:
 
 - Show participants points along with a ranking on the participant page.
 - Allow selecting specific judges for scoring or review with individual passwords.

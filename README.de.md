@@ -39,7 +39,7 @@ Wir empfehlen dringend, einen Python-Interpreter zu verwenden (vorzugsweise PyCh
     <img src="images/console-link.png" width="1810" alt="">
 
 
-3. Das Dashboard öffnet sich standardmäßig mit der Teilnehmerübersicht.
+3. Das Dashboard öffnet sich standardmäßig mit der Teilnehmerübersicht. Unterhalb der Tabellenüberschrift ist ein Filter integriert, mit dem jede Spalte einzeln gefiltert werden kann. (Der gleiche Filter kann auch in der Juryansicht verwendet werden.)
 
 
 4. Verwenden Sie den Schalter oben links, um zwischen Dark Mode und Light Mode zu wechseln.
@@ -47,7 +47,7 @@ Wir empfehlen dringend, einen Python-Interpreter zu verwenden (vorzugsweise PyCh
     <img src="images/switch-dark.png" width="100" alt=""> <img src="images/switch-light.png" width="100" alt="">
 
 
-5. Klicken Sie oben rechts auf die Schaltfläche „Jury Ansicht“. Geben Sie das Passwort im Popup-Fenster ein.
+5. Klicken Sie oben rechts auf die Schaltfläche „Jury Ansicht“. Geben Sie das Passwort im Popup-Fenster ein. Das Passwort lautet `test`. (Sehr kreativ, wissen wir...)
 
     <img src="images/password.png" width="300" alt="">
 
@@ -85,7 +85,7 @@ Wir empfehlen dringend, einen Python-Interpreter zu verwenden (vorzugsweise PyCh
 
 ## Weiterführende Ideen
 
-Mit mehr Zeit hätten die folgenden Ideen ebenfalls berücksichtigt werden können:
+Mit noch mehr Zeit hätten die folgenden Ideen ebenfalls berücksichtigt werden können:
 
 - Punkte der Teilnehmenden auf der Teilnehmerseite zusammen mit einer Rangliste anzeigen.  
 - Auswahl bestimmter Jurymitglieder für Bewertung oder Übersicht ermöglichen, jeweils mit individuellem Passwort.
