@@ -12,6 +12,11 @@ import pandas as pd
 from pathlib import Path
 from load_data import DataLoader
 from src.unicycle.constants import *
+from src.unicycle.riders_db_handler import RidersDbHandler
+from src.unicycle.routines_db_handler import RoutinesDbHandler
+from src.unicycle.riders_routines_db_handler import RidersRoutinesDbHandler
+from src.unicycle.points_db_handler import PointsDbHandler
+
 
 
 
@@ -316,17 +321,24 @@ class Dashboard:
         ordered_cols = base_cols + T_COLS + P_COLS + D_COLS + ["Gesamtpunkte"]
 
         if jury_mode:
-            df_routines = DataLoader(
-                Path(UNICYCLE_SCORE_BOARD_PATH, "data/routines.db"), "routines"
-            ).get_data()
-            df_points = DataLoader(
-                Path(UNICYCLE_SCORE_BOARD_PATH, "data/points.db"), "points"
-            ).get_data()
+            routines_db_handler = RoutinesDbHandler()
+            df_routines = routines_db_handler.get_data()
+            #df_routines = DataLoader(
+            #    Path(UNICYCLE_SCORE_BOARD_PATH, "data/routines.db"), "routines"
+            #).get_data()
+            points_db_handler = PointsDbHandler()
+            df_points = points_db_handler.get_data()
+            #df_points = DataLoader(
+            #    Path(UNICYCLE_SCORE_BOARD_PATH, "data/points.db"), "points"
+            #).get_data()
 
-            if df_points.empty:
-                df_points = pd.DataFrame(columns=BASE_COLS_JURY)
+            #if df_points.empty:
+            #    df_points = pd.DataFrame(columns=id_)
+            print('df_routines.columns in _datatable', df_routines.columns)
+            print('df_points.columns in _datatable', df_points.columns)
 
-            df = df_routines.merge(df_points, on=BASE_COLS_JURY, how="left")
+            df = df_routines.merge(df_points, on='id_routine', how="left")
+            print('df.columns in _datatable', df.columns)
 
             for col in ordered_cols:
                 if col not in df.columns:
@@ -688,9 +700,11 @@ class Dashboard:
             }
 
             if jury_mode:
-                df_routines = DataLoader(
-                    Path(UNICYCLE_SCORE_BOARD_PATH, "data/routines.db"), "routines"
-                ).get_data()
+                routines_db_handler = RoutinesDbHandler()
+                df_routines = routines_db_handler.get_data()
+                #df_routines = DataLoader(
+                #    Path(UNICYCLE_SCORE_BOARD_PATH, "data/routines.db"), "routines"
+                #).get_data()
                 title = "⚖️ Jury Übersicht"
                 button_text = "👥 Wechsel zu Teilnehmer Ansicht"
                 legend = self._judge_legend_collapsible(theme)
@@ -704,19 +718,17 @@ class Dashboard:
                     ]
                 )
             else:
-                df_riders = DataLoader(
-                    Path(UNICYCLE_SCORE_BOARD_PATH, "data/riders.db"), "riders"
-                ).get_data(sql_query="SELECT id_rider,name,club FROM riders")
-                df_routines = DataLoader(
-                    Path(UNICYCLE_SCORE_BOARD_PATH, "data/routines.db"), "routines"
-                ).get_data(
+                riders_db_handler = RidersDbHandler()
+                df_riders = riders_db_handler.get_data(sql_query="SELECT id_rider,name,club FROM riders")
+
+                routines_db_handler = RoutinesDbHandler()
+                df_routines = routines_db_handler.get_data(
                     sql_query="SELECT id_routine,routine_name,category,age_group FROM routines"
                 )
-                df_riders2routines = DataLoader(
-                    Path(UNICYCLE_SCORE_BOARD_PATH, "data/riders_routines.db"),
-                    "riders_routines",
-                ).get_data()
-                df_display = df_riders2routines.merge(
+                riders_routines_db_handler = RidersRoutinesDbHandler()
+                df_riders_routines = riders_routines_db_handler.get_data()
+
+                df_display = df_riders_routines.merge(
                     df_riders, on="id_rider", how="left"
                 )
                 df_display = df_display.merge(df_routines, on="id_routine", how="left")
@@ -839,9 +851,11 @@ class Dashboard:
 
             # save to points.db
             try:
-                DataLoader(
-                    Path(UNICYCLE_SCORE_BOARD_PATH, "data/points.db"), "points"
-                ).update_data(df)
+                points_db_handler = PointsDbHandler()
+                points_db_handler.update_data(df)
+                #DataLoader(
+                #    Path(UNICYCLE_SCORE_BOARD_PATH, "data/points.db"), "points"
+                #).update_data(df)
             except Exception as e:
                 print("Error saving points:", e)
 
@@ -856,4 +870,14 @@ class Dashboard:
 
 
 if __name__ == "__main__":
+    riders_db_handler = RidersDbHandler()
+    routines_db_handler = RoutinesDbHandler()
+    riders_routines_db_handler = RidersRoutinesDbHandler()
+    points_db_handler = PointsDbHandler()
+
     Dashboard().run()
+
+    riders_db_handler.disconnect()
+    routines_db_handler.disconnect()
+    riders_routines_db_handler.disconnect()
+    points_db_handler.disconnect()
