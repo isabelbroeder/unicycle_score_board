@@ -14,8 +14,10 @@ class Categories(StrEnum):
      SMALL_GROUP = "small_group"
      LARGE_GROUP = "large_group"
 
+"""Application-wide constants for the dashboard."""
+
 BASE_COLS_PARTICIPANT = ["routine_name", "names", "age_group", "category"]
-BASE_COLS_JURY = ["routine_name", "age_group", "category"]
+BASE_COLS_JURY = ["id_routine", "routine_name", "age_group", "category"]
 
 T_SUBS = ["Q", "M", "D"]
 P_SUBS = ["P", "C", "I"]
@@ -27,13 +29,29 @@ D_COLS = [f"D{i}_{s}" for i in range(1, 5) for s in D_SUBS]
 
 TP_SUBCOLS = T_COLS + P_COLS
 SCORE_COLS = TP_SUBCOLS + D_COLS
+TOTAL_COL = "Ergebnis"
+COLS_TO_SAVE = ["id_routine"] + SCORE_COLS + [TOTAL_COL]
+
+ROUTINE_RESULT_WEIGHTS = {"T": 0.45, "P": 0.45, "D": 0.10}
+
+EMPTY_SCORE = "–"
+LOCKED_D_JUDGE_COLS = ["D3", "D4"]
+LOCKED_D_CATEGORIES = ["individual female", "individual male", "pair"]
+
+MIN_SCORE = 0
+MAX_D_SCORE = 999
+MAX_TP_SCORE = 10
+
+CATEGORY_COL = "category"
+POINTS_DB_NAME = "points.db"
+POINTS_TABLE_NAME = "points"
 
 COLUMN_LABELS = {
     "routine_name": "Kür-Name",
     "names": "Namen*",
     "age_group": "Altersklasse",
     "category_label": "Kategorie",
-    "Gesamtpunkte": "Gesamtpunkte",
+    "Ergebnis": "Ergebnis",
 }
 
 CATEGORY_LABELS = {
@@ -52,6 +70,34 @@ CATEGORY_ORDER = [
     "Großgruppe",
 ]
 
+CATEGORY_JUDGES = {
+    "individual female": {
+        "T": ["T1", "T2", "T3", "T4"],
+        "P": ["P1", "P2", "P3", "P4"],
+        "D": ["D1", "D2"],
+    },
+    "individual male": {
+        "T": ["T1", "T2", "T3", "T4"],
+        "P": ["P1", "P2", "P3", "P4"],
+        "D": ["D1", "D2"],
+    },
+    "pair": {
+        "T": ["T1", "T2", "T3", "T4"],
+        "P": ["P1", "P2", "P3", "P4"],
+        "D": ["D1", "D2"],
+    },
+    "small_group": {
+        "T": ["T1", "T2", "T3", "T4"],
+        "P": ["P1", "P2", "P3", "P4"],
+        "D": ["D1", "D2", "D3", "D4"],
+    },
+    "large_group": {
+        "T": ["T1", "T2", "T3", "T4"],
+        "P": ["P1", "P2", "P3", "P4"],
+        "D": ["D1", "D2", "D3", "D4"],
+    },
+}
+
 JUDGE_LEGEND = {
     "T": {
         "Q": "Anzahl der Einrad-Elemente und Übergänge",
@@ -64,8 +110,8 @@ JUDGE_LEGEND = {
         "I": "Interpretation der Musik/Timing",
     },
     "D": {
-        "S": "Leichte Abstiege",
-        "B": "Schwere Abstiege",
+        "S": "Kleine Abstiege",
+        "B": "Große Abstiege",
         "N": "Anzahl der Fahrer:innen",
     },
 }
@@ -76,3 +122,22 @@ JUDGE_LEGEND = {
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
 UNICYCLE_SCORE_BOARD_PATH = Path(SCRIPT_DIR).parent.parent
+LIGHT_THEME = {
+    "backgroundColor": "#ffffff",
+    "textColor": "#000000",
+    "headerBg": "#f0f0f0",
+    "headerColor": "#000000",
+    "cellBg": "#ffffff",
+    "oddRowBg": "#f9f9f9",
+    "border": "#dddddd",
+}
+
+DARK_THEME = {
+    "backgroundColor": "#1e1e1e",
+    "textColor": "#ffffff",
+    "headerBg": "#333333",
+    "headerColor": "#ffffff",
+    "cellBg": "#222222",
+    "oddRowBg": "#2a2a2a",
+    "border": "#444444",
+}
