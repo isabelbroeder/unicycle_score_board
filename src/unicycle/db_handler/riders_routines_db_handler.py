@@ -3,10 +3,10 @@ from pathlib import Path
 import os
 import sqlite3
 
-from src.unicycle.db_handler import DbHandler
+from src.unicycle.db_handler.db_handler import DbHandler
+from src.unicycle.constants import get_path_project_root
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-unicycle_score_board_path = Path(script_dir).parent.parent
+PROJECT_ROOT = get_path_project_root()
 DIRECTORY_DB = Path("data")
 FILE_NAME_DB = Path("riders_routines.db")
 TABLE_NAME = "riders_routines"
@@ -24,7 +24,7 @@ class RidersRoutinesDbHandler(DbHandler):
         if not hasattr(self, "initialised"):
             self.initialised = True
             super().__init__(
-                Path(unicycle_score_board_path, DIRECTORY_DB, FILE_NAME_DB), TABLE_NAME
+                Path(PROJECT_ROOT, DIRECTORY_DB, FILE_NAME_DB), TABLE_NAME
             )
 
     def create_table(self):

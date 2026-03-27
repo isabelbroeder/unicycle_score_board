@@ -1,13 +1,21 @@
 from pathlib import Path
-import os
 
-from src.unicycle.constants import UNICYCLE_SCORE_BOARD_PATH
-from src.unicycle.db_handler import DbHandler
+from src.unicycle.constants import get_path_project_root
+from src.unicycle.db_handler.db_handler import DbHandler
 
-
+PROJECT_ROOT = get_path_project_root()
 PATH_DATABASE = Path("data")
 FILE_NAME_DB = Path("riders.db")
 TABLE_NAME = "riders"
+
+SQL_CREATE_TABLE = """
+        CREATE TABLE IF NOT EXISTS riders (
+        id_rider INTEGER PRIMARY KEY AUTOINCREMENT,
+        name VARCHAR(50),
+        gender CHAR(1),
+        date_of_birth DATE,
+        age_competition_day INTEGER,
+        club VARCHAR(50));"""
 
 
 class RidersDbHandler(DbHandler):
@@ -22,18 +30,9 @@ class RidersDbHandler(DbHandler):
         if not hasattr(self, "initialised"):
             self.initialised = True
             super().__init__(
-                Path(UNICYCLE_SCORE_BOARD_PATH, PATH_DATABASE, FILE_NAME_DB),
+                Path(PROJECT_ROOT, PATH_DATABASE, FILE_NAME_DB),
                 TABLE_NAME,
             )
 
     def create_table(self):
-        SQL_CREATE_TABLE = """
-                CREATE TABLE IF NOT EXISTS riders (
-                id_rider INTEGER PRIMARY KEY AUTOINCREMENT,
-                name VARCHAR(50),
-                gender CHAR(1),
-                date_of_birth DATE,
-                age_competition_day INTEGER,
-                club VARCHAR(50));"""
-
         self.execute(sql_query=SQL_CREATE_TABLE)

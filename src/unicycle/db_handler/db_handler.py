@@ -31,12 +31,14 @@ class DbHandler(ABC):
 
 
     def disconnect(self):
+        """Disconnect DbHandler from database."""
         if not self.is_connected:
             pass
         self.db_connection.close()
         self.is_connected = False
 
     def connect(self):
+        """Connect DbHandler with database."""
         if self.is_connected:
             pass
         try:
