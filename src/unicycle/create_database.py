@@ -6,10 +6,10 @@ from pandas import DataFrame
 
 from src.unicycle.constants import *
 from src.unicycle.functions import calculate_age
-from src.unicycle.points_db_handler import PointsDbHandler
-from src.unicycle.riders_db_handler import RidersDbHandler
-from src.unicycle.routines_db_handler import RoutinesDbHandler
-from src.unicycle.riders_routines_db_handler import RidersRoutinesDbHandler
+from src.unicycle.db_handler.points_db_handler import PointsDbHandler
+from src.unicycle.db_handler.riders_db_handler import RidersDbHandler
+from src.unicycle.db_handler.routines_db_handler import RoutinesDbHandler
+from src.unicycle.db_handler.riders_routines_db_handler import RidersRoutinesDbHandler
 
 
 SHEET_NAME_REGISTRATION_DATA = "Teilnehmer"
@@ -168,7 +168,7 @@ def fill_database_points(routines_db_handler: RoutinesDbHandler = RoutinesDbHand
 
 def split_individual_male_female(riders_db_handler: RidersDbHandler = RidersDbHandler(),
                                  routines_db_handler: RoutinesDbHandler = RoutinesDbHandler(),
-                                 riders_routines_db_handler: RidersRoutinesDbHandler() = RidersRoutinesDbHandler()):
+                                 riders_routines_db_handler: RidersRoutinesDbHandler = RidersRoutinesDbHandler()):
     """
     split the category individual into individual female and individual male
     """

@@ -93,12 +93,21 @@ class DbHandler(ABC):
         except Exception as e:
             print(f"❌ Error executing sql query {sql_query} on {self.table_name}: {e}")
 
-    def update_data(self, df: pd.DataFrame):
+    def update_data(self, df: pd.DataFrame, columns: list[str] = None):
+        """Write dataframe contents to the configured SQLite table.
+
+        :param pd.DataFrame df: Data to write into the table.
+        :param list[str] columns: Optional list of allowed columns to persist.
+            If provided, only these columns are written.
+        :return None: Writes the dataframe to the database table.
+        """
         try:
-            df.to_sql(
-                self.table_name, self.db_connection, if_exists="replace", index=False
-            )
+            if columns is not None:
+                df = df[[col for col in columns if col in df.columns]].copy()
+
+            df.to_sql(self.table_name, self.db_connection, if_exists="replace", index=False)
             print(f"✅ {self.table_name} updated successfully.")
+
         except Exception as e:
             print(f"❌ Error writing to {self.table_name}: {e}")
 

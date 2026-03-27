@@ -1,19 +1,13 @@
 """Creates dashboard from data in database."""
 
 import json
-from pathlib import Path
-from load_data import DataLoader
 from src.unicycle.constants import *
-from src.unicycle.riders_db_handler import RidersDbHandler
-from src.unicycle.routines_db_handler import RoutinesDbHandler
-from src.unicycle.riders_routines_db_handler import RidersRoutinesDbHandler
-from src.unicycle.points_db_handler import PointsDbHandler
 import dash_bootstrap_components as dbc
 from dash import Dash
 
-from callbacks import register_callbacks
-from components import build_layout
-from data_service import DataService
+from src.unicycle.dashboard.callbacks import register_callbacks
+from src.unicycle.dashboard.components import build_layout
+from src.unicycle.dashboard.data_service import DataService
 
 
 def get_project_paths() -> dict[str, Path]:
@@ -29,13 +23,13 @@ def get_project_paths() -> dict[str, Path]:
 
 
 def load_config(config_path: Path) -> dict:
-    """Load application configuration from a JSON file."""
+    """Load dashboard configuration from a JSON file."""
     with config_path.open("r", encoding="utf-8") as file:
         return json.load(file)
 
 
 class Dashboard:
-    """Main application class for the unicycle scoring dashboard."""
+    """Main dashboard class for the unicycle scoring dashboard."""
 
     def __init__(self):
         self.app = Dash(

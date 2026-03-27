@@ -2,9 +2,9 @@ import datetime
 
 from src.unicycle.functions import calculate_age
 from src.unicycle.create_database import set_age_group
-from src.unicycle.riders_db_handler import RidersDbHandler
-from src.unicycle.riders_routines_db_handler import RidersRoutinesDbHandler
-from src.unicycle.routines_db_handler import RoutinesDbHandler
+from src.unicycle.db_handler.riders_db_handler import RidersDbHandler
+from src.unicycle.db_handler.riders_routines_db_handler import RidersRoutinesDbHandler
+from src.unicycle.db_handler.routines_db_handler import RoutinesDbHandler
 
 
 def test_calculate_age_year():

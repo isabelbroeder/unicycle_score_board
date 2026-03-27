@@ -6,9 +6,16 @@ import numpy as np
 import pandas as pd
 
 from constants import COLS_TO_SAVE, SCORE_COLS
-from load_data import DataLoader
 from scoring import apply_locked_d_judges, recalculate_all_results
+from src.unicycle.db_handler.points_db_handler import PointsDbHandler
+from src.unicycle.db_handler.riders_db_handler import RidersDbHandler
+from src.unicycle.db_handler.routines_db_handler import RoutinesDbHandler
+from src.unicycle.db_handler.riders_routines_db_handler import RidersRoutinesDbHandler
 
+POINTS_DB_HANDLER = PointsDbHandler()
+RIDERS_DB_HANDLER = RidersDbHandler()
+ROUTINES_DB_HANDLER = RoutinesDbHandler()
+RIDERSROUTINES_DB_HANDLER = RidersRoutinesDbHandler()
 
 class DataService:
     """Encapsulates all database access used by the dashboard."""
@@ -22,11 +29,11 @@ class DataService:
 
     def load_routines(self) -> pd.DataFrame:
         """Load all routine records."""
-        return DataLoader(self.db_path("routines.db"), "routines").get_data()
+        return ROUTINES_DB_HANDLER.get_data()
 
     def load_routines_for_participant_view(self) -> pd.DataFrame:
         """Load only the routine columns needed for participant view."""
-        return DataLoader(self.db_path("routines.db"), "routines").get_data(
+        return ROUTINES_DB_HANDLER.get_data(
             sql_query=(
                 "SELECT id_routine, routine_name, category, age_group "
                 "FROM routines"
@@ -35,20 +42,17 @@ class DataService:
 
     def load_riders(self) -> pd.DataFrame:
         """Load rider data used for participant display."""
-        return DataLoader(self.db_path("riders.db"), "riders").get_data(
+        return RIDERS_DB_HANDLER.get_data(
             sql_query="SELECT id_rider, name, club FROM riders"
         )
 
     def load_riders_routines(self) -> pd.DataFrame:
         """Load the rider-to-routine mapping table."""
-        return DataLoader(
-            self.db_path("riders_routines.db"),
-            "riders_routines",
-        ).get_data()
+        return RIDERSROUTINES_DB_HANDLER.get_data()
 
     def load_points(self) -> pd.DataFrame:
         """Load all persisted scoring data."""
-        return DataLoader(self.db_path("points.db"), "points").get_data()
+        return POINTS_DB_HANDLER.get_data()
 
     def load_jury_view_data(self) -> pd.DataFrame:
         """Load and prepare the dataframe used in jury mode."""
@@ -111,7 +115,7 @@ class DataService:
         columns: list[str] | None = None,
     ) -> None:
         """Persist scoring data to the points database."""
-        DataLoader(self.db_path("points.db"), "points").update_data(
+        POINTS_DB_HANDLER.update_data(
             df,
             columns=columns or COLS_TO_SAVE,
         )

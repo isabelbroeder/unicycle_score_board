@@ -1,3 +1,5 @@
+"""Application-wide constants for the dashboard."""
+
 import datetime
 import os
 from enum import StrEnum
@@ -13,8 +15,6 @@ class Categories(StrEnum):
      PAIR = "pair"
      SMALL_GROUP = "small_group"
      LARGE_GROUP = "large_group"
-
-"""Application-wide constants for the dashboard."""
 
 BASE_COLS_PARTICIPANT = ["routine_name", "names", "age_group", "category"]
 BASE_COLS_JURY = ["id_routine", "routine_name", "age_group", "category"]
@@ -116,12 +116,6 @@ JUDGE_LEGEND = {
     },
 }
 
-# the following lines should not be executed on module level as it is doing IO operations (reading a file)
-# which happens when ever this module is loaded, not even if something is run.
-# Therefore, please move it in a function
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
-UNICYCLE_SCORE_BOARD_PATH = Path(SCRIPT_DIR).parent.parent
 LIGHT_THEME = {
     "backgroundColor": "#ffffff",
     "textColor": "#000000",
@@ -141,3 +135,10 @@ DARK_THEME = {
     "oddRowBg": "#2a2a2a",
     "border": "#444444",
 }
+
+# the following lines should not be executed on module level as it is doing IO operations (reading a file)
+# which happens when ever this module is loaded, not even if something is run.
+# Therefore, please move it in a function
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
+UNICYCLE_SCORE_BOARD_PATH = Path(SCRIPT_DIR).parent.parent
