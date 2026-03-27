@@ -5,6 +5,8 @@ import pandas as pd
 from pandas import DataFrame
 
 from src.unicycle.constants import *
+#from src.unicycle.app import get_project_paths
+
 from src.unicycle.functions import calculate_age
 from src.unicycle.db_handler.points_db_handler import PointsDbHandler
 from src.unicycle.db_handler.riders_db_handler import RidersDbHandler
@@ -15,6 +17,26 @@ from src.unicycle.db_handler.riders_routines_db_handler import RidersRoutinesDbH
 SHEET_NAME_REGISTRATION_DATA = "Teilnehmer"
 SHEET_NAME_REGISTRATION_OVERVIEW = "Allg. Daten"
 
+COL_NAMES_REGISTRATION_FILE = [
+    "name",
+    "date_of_birth",
+    "age",
+    "gender",
+    "start_individual",
+    "name_individual",
+    "age_group_individual",
+    "start_pair",
+    "name_pair",
+    "age_group_pair",
+    "start_small_group",
+    "name_small_group",
+    "age_group_small_group",
+    "start_large_group",
+    "name_large_group",
+    "age_group_large_group",
+    "entry_fee",
+]
+
 def read_registration_file(path: Path) -> pd.DataFrame:
     """
     Read the registration file
@@ -22,25 +44,6 @@ def read_registration_file(path: Path) -> pd.DataFrame:
         path -- path to registration file
     return pd.Dataframe with registration data
     """
-    COL_NAMES_REGISTRATION_FILE = [
-        "name",
-        "date_of_birth",
-        "age",
-        "gender",
-        "start_individual",
-        "name_individual",
-        "age_group_individual",
-        "start_pair",
-        "name_pair",
-        "age_group_pair",
-        "start_small_group",
-        "name_small_group",
-        "age_group_small_group",
-        "start_large_group",
-        "name_large_group",
-        "age_group_large_group",
-        "entry_fee",
-    ]
 
     registration = pd.read_excel(path, sheet_name=SHEET_NAME_REGISTRATION_DATA, skiprows=4)
     registration.columns = COL_NAMES_REGISTRATION_FILE
@@ -98,7 +101,7 @@ def fill_database_routines(registration: pd.DataFrame,
                     registration[str("name_" + category)].where(
                         registration[str("age_group_" + category)] == age_group
                     )
-                ).dropna()  # routine names in this category and age group
+                ).dropna()
             ):
                 if routine_name.isspace():
                     continue
@@ -113,7 +116,7 @@ def fill_database_routines(registration: pd.DataFrame,
                 )
                 routines_db_handler.execute(sql_insert, data)
                 id_routine = routines_db_handler.cursor.lastrowid
-                # get riders of routine
+
                 name_riders = (
                     registration[["name", "date_of_birth"]]
                     .where(
@@ -151,12 +154,6 @@ def fill_database_routines(registration: pd.DataFrame,
                 riders_routines_db_handler.execute(sql_insert, data)
 
 def fill_database_points(routines_db_handler: RoutinesDbHandler = RoutinesDbHandler(), points_db_handler: PointsDbHandler = PointsDbHandler()):
-    #tp_columns = " REAL,\n".join(TP_SUBCOLS) + " REAL"
-    #d_columns = " INTEGER,\n".join(D_COLS) + " INTEGER"
-
-    #routines_db_handler = RoutinesDbHandler()
-    #if not routines_db_handler.is_connected:
-    #    routines_db_handler.connect()
 
     id_routine = routines_db_handler.get_data("""SELECT id_routine FROM routines""")
     id_routine_str = [f"({val})" for val in id_routine['id_routine'].values]
@@ -337,11 +334,11 @@ def format_names(s):
 
 def main():
     registration_files = Path(
-        UNICYCLE_SCORE_BOARD_PATH, "data/registration_files"
+        get_path_project_root(), "data/registration_files"
     ).glob("*.xlsx")
     registration_files = [
         Path(
-            UNICYCLE_SCORE_BOARD_PATH,
+            get_path_project_root(),
             "data/registration_files/Anmeldung_Landesmeisterschaft_2025_Verein1.xlsx",
         )
     ]
@@ -358,7 +355,7 @@ def main():
 
     for file in registration_files:
         registration = read_registration_file(
-            path=Path(UNICYCLE_SCORE_BOARD_PATH, file)
+            path=Path(get_path_project_root(), file)
         )
         fill_database_riders(registration)
         fill_database_routines(registration)
