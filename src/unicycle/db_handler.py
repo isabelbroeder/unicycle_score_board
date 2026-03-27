@@ -15,14 +15,15 @@ class DbHandler(ABC):
         self.db_path = db_path
         self.table_name = table_name
         try:
-            self.db_connection = sqlite3.connect(self.db_path)
+            self.db_connection = sqlite3.connect(self.db_path,check_same_thread=False,detect_types=sqlite3.PARSE_DECLTYPES)
             self.cursor = self.db_connection.cursor()
         except Exception as e:
             print(f"❌ Failed to connect database {self.table_name}: {e}")
             self.is_connected = False
         self.is_connected = True
-        sqlite3.register_adapter(datetime.date, adapt_date_iso)
         sqlite3.register_converter("DATE", convert_date)
+        sqlite3.register_adapter(datetime.date, adapt_date_iso)
+
 
     @abstractmethod
     def create_table(self):
@@ -30,8 +31,21 @@ class DbHandler(ABC):
 
 
     def disconnect(self):
+        if not self.is_connected:
+            pass
         self.db_connection.close()
         self.is_connected = False
+
+    def connect(self):
+        if self.is_connected:
+            pass
+        try:
+            self.db_connection = sqlite3.connect(self.db_path,check_same_thread=False,detect_types=sqlite3.PARSE_DECLTYPES)
+            self.cursor = self.db_connection.cursor()
+        except Exception as e:
+            print(f"❌ Failed to connect database {self.table_name}: {e}")
+            self.is_connected = False
+        self.is_connected = True
 
 
     def get_data(
@@ -69,7 +83,6 @@ class DbHandler(ABC):
             return pd.DataFrame()
 
     def execute(self, sql_query: str, params=None):
-
         try:
             if params is None:
                 self.cursor.execute(sql_query)
@@ -78,7 +91,7 @@ class DbHandler(ABC):
                     self.cursor.execute(sql_query, param)
             self.db_connection.commit()
         except Exception as e:
-            print(f"❌ Error executing sql query on {self.table_name}: {e}")
+            print(f"❌ Error executing sql query {sql_query} on {self.table_name}: {e}")
 
     def update_data(self, df: pd.DataFrame):
         try:
