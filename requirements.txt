@@ -1,0 +1,6 @@
+dash==4.1.0
+dash_bootstrap_components==2.0.4
+dash_daq==0.6.0
+numpy==2.4.3
+pandas==3.0.1
+bcrypt==5.0.0
