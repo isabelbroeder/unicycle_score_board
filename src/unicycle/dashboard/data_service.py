@@ -5,8 +5,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from constants import COLS_TO_SAVE, SCORE_COLS
-from scoring import apply_locked_d_judges, recalculate_all_results
+from src.unicycle.constants import COLS_TO_SAVE, SCORE_COLS
+from src.unicycle.dashboard.scoring import apply_locked_d_judges, recalculate_all_results
 from src.unicycle.db_handler.points_db_handler import PointsDbHandler
 from src.unicycle.db_handler.riders_db_handler import RidersDbHandler
 from src.unicycle.db_handler.routines_db_handler import RoutinesDbHandler

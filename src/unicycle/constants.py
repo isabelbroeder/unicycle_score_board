@@ -1,6 +1,7 @@
 """Application-wide constants for the dashboard."""
 
 import datetime
+import json
 import os
 from enum import StrEnum
 from pathlib import Path
@@ -136,9 +137,20 @@ DARK_THEME = {
     "border": "#444444",
 }
 
-# the following lines should not be executed on module level as it is doing IO operations (reading a file)
-# which happens when ever this module is loaded, not even if something is run.
-# Therefore, please move it in a function
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(SCRIPT_DIR, "config.json")
-UNICYCLE_SCORE_BOARD_PATH = Path(SCRIPT_DIR).parent.parent
+
+def get_path_project_root() -> Path:
+    """return path to project root."""
+    script_dir = Path(__file__).resolve().parent
+    return script_dir.parent.parent
+
+
+def get_path_config_file() -> Path:
+    """return path to config file root."""
+    script_dir = Path(__file__).resolve().parent
+    return script_dir / "config.json"
+
+
+def load_config(config_path: Path) -> dict:
+    """Load dashboard configuration from a JSON file."""
+    with config_path.open("r", encoding="utf-8") as file:
+        return json.load(file)

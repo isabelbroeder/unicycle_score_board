@@ -5,7 +5,7 @@ import dash_daq as daq
 import pandas as pd
 from dash import dash_table, dcc, html
 
-from constants import (
+from src.unicycle.constants import (
     BASE_COLS_JURY,
     BASE_COLS_PARTICIPANT,
     CATEGORY_LABELS,

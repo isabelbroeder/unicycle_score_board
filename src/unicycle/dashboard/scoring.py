@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from constants import (
+from src.unicycle.constants import (
     CATEGORY_COL,
     CATEGORY_JUDGES,
     D_COLS,
