@@ -1,11 +1,18 @@
 import datetime
 import os
+from enum import StrEnum
 from pathlib import Path
 
 
-DATE_COMPETITION = datetime.datetime(2026, 3, 7, 0, 0)
+DATE_COMPETITION = datetime.date(2026, 3, 7)
 
-CATEGORIES = ["individual", "pair", "small_group", "large_group"]
+CELL_WITH_CLUB = (7, "E")
+
+class Categories(StrEnum):
+     INDIVIDUAL = "individual"
+     PAIR = "pair"
+     SMALL_GROUP = "small_group"
+     LARGE_GROUP = "large_group"
 
 BASE_COLS_PARTICIPANT = ["routine_name", "names", "age_group", "category"]
 BASE_COLS_JURY = ["routine_name", "age_group", "category"]
