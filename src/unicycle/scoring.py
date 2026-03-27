@@ -20,8 +20,6 @@ from constants import (
 
 RESULT_COLS = ["T", "P", "D", "Ergebnis"]
 GROUP_CATEGORIES = {
-    "Small Group",
-    "Large Group",
     "small_group",
     "large_group",
 }
