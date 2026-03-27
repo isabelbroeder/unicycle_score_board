@@ -1,35 +1,28 @@
-import datetime
 import string
 
 import pandas as pd
-import os
 
 from pandas import DataFrame
-from pathlib import Path
 
+from src.unicycle.constants import *
 from src.unicycle.functions import calculate_age
+from src.unicycle.points_db_handler import PointsDbHandler
 from src.unicycle.riders_db_handler import RidersDbHandler
 from src.unicycle.routines_db_handler import RoutinesDbHandler
 from src.unicycle.riders_routines_db_handler import RidersRoutinesDbHandler
 
 
-DATE_COMPETITION = datetime.datetime(2026, 3, 7, 0, 0)
-CATEGORIES = ["individual", "pair", "small_group", "large_group"]
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-UNICYCLE_SCORE_BOARD_PATH = Path(SCRIPT_DIR).parent.parent
-
+SHEET_NAME_REGISTRATION_DATA = "Teilnehmer"
+SHEET_NAME_REGISTRATION_OVERVIEW = "Allg. Daten"
 
 def read_registration_file(path: Path) -> pd.DataFrame:
     """
     Read the registration file
     Keyword arguments:
         path -- path to registration file
-        club -- club whose registration file is read in
     return pd.Dataframe with registration data
     """
-
-    registration = pd.read_excel(path, sheet_name=1, skiprows=4)
-    registration.columns = [
+    COL_NAMES_REGISTRATION_FILE = [
         "name",
         "date_of_birth",
         "age",
@@ -48,16 +41,18 @@ def read_registration_file(path: Path) -> pd.DataFrame:
         "age_group_large_group",
         "entry_fee",
     ]
-    # only rows with entries
-    registration = registration[registration["name"].notna()]
+
+    registration = pd.read_excel(path, sheet_name=SHEET_NAME_REGISTRATION_DATA, skiprows=4)
+    registration.columns = COL_NAMES_REGISTRATION_FILE
+
+    registration = registration[registration[COL_NAMES_REGISTRATION_FILE[0]].notna()]
     registration = registration.drop(columns="entry_fee")
     registration = registration.convert_dtypes()
     registration["date_of_birth"] = registration["date_of_birth"].dt.date
 
-    registration_overview = pd.read_excel(path, sheet_name=0, header=None)
-    cell = (7, "E")  # Cell with club name
+    registration_overview = pd.read_excel(path, sheet_name=SHEET_NAME_REGISTRATION_OVERVIEW, header=None)
     club = registration_overview.loc[
-        cell[0] - 1, list(string.ascii_uppercase).index(cell[1])
+        CELL_WITH_CLUB[0] - 1, list(string.ascii_uppercase).index(CELL_WITH_CLUB[1])
     ]
     number_of_riders = registration["name"].size
     registration.insert(4, "club", [club] * number_of_riders)
@@ -94,7 +89,7 @@ def fill_database_routines(registration: pd.DataFrame,
         registration: dataframe with registration data
     """
 
-    for category in CATEGORIES:
+    for category in Categories:
         for age_group in set(
             registration["age_group_" + str(category)].dropna()
         ):  # age groups in this category
@@ -141,6 +136,7 @@ def fill_database_routines(registration: pd.DataFrame,
                     + name_riders["date_of_birth"].tolist(),
                 )
 
+
                 sql_insert = """INSERT INTO riders_routines (id_rider, id_routine) VALUES (?, ? ) """
 
                 data = list(
@@ -153,6 +149,21 @@ def fill_database_routines(registration: pd.DataFrame,
                     )
                 )
                 riders_routines_db_handler.execute(sql_insert, data)
+
+def fill_database_points(routines_db_handler: RoutinesDbHandler = RoutinesDbHandler(), points_db_handler: PointsDbHandler = PointsDbHandler()):
+    #tp_columns = " REAL,\n".join(TP_SUBCOLS) + " REAL"
+    #d_columns = " INTEGER,\n".join(D_COLS) + " INTEGER"
+
+    #routines_db_handler = RoutinesDbHandler()
+    #if not routines_db_handler.is_connected:
+    #    routines_db_handler.connect()
+
+    id_routine = routines_db_handler.get_data("""SELECT id_routine FROM routines""")
+    id_routine_str = [f"({val})" for val in id_routine['id_routine'].values]
+    id_routine_str = ", ".join(id_routine_str)
+    SQL_INSERT_KEYS = f"INSERT INTO points (id_routine) VALUES {id_routine_str};"
+
+    points_db_handler.execute(SQL_INSERT_KEYS)
 
 
 def split_individual_male_female(riders_db_handler: RidersDbHandler = RidersDbHandler(),
@@ -206,7 +217,6 @@ def check_age_groups(age_groups: dict, riders_db_handler= RidersDbHandler() ,
     )
 
     df_max = df.groupby(["id_routine"]).max()
-    print(df_max)
     df_update_age_groups = DataFrame(columns=["id_routine", "age_group"])
 
     for row in range(df_routines.shape[0]):
@@ -338,10 +348,13 @@ def main():
     riders_db_handler = RidersDbHandler()
     routines_db_handler = RoutinesDbHandler()
     riders_routines_db_handler = RidersRoutinesDbHandler()
+    points_db_handler = PointsDbHandler()
 
     riders_db_handler.create_table()
     routines_db_handler.create_table()
     riders_routines_db_handler.create_table()
+    points_db_handler.create_table()
+
 
     for file in registration_files:
         registration = read_registration_file(
@@ -349,7 +362,7 @@ def main():
         )
         fill_database_riders(registration)
         fill_database_routines(registration)
-
+    fill_database_points(routines_db_handler, points_db_handler)
     split_individual_male_female()
 
     age_groups = {
@@ -366,6 +379,7 @@ def main():
     riders_routines_db_handler.disconnect()
     riders_db_handler.disconnect()
     routines_db_handler.disconnect()
+    points_db_handler.disconnect()
 
 
 if __name__ == "__main__":
