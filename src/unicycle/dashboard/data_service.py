@@ -17,6 +17,7 @@ RIDERS_DB_HANDLER = RidersDbHandler()
 ROUTINES_DB_HANDLER = RoutinesDbHandler()
 RIDERSROUTINES_DB_HANDLER = RidersRoutinesDbHandler()
 
+
 class DataService:
     """Encapsulates all database access used by the dashboard."""
 

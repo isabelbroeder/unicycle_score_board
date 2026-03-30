@@ -186,7 +186,8 @@ def register_callbacks(app, data_service, stored_hash: bytes):
 
         for col in SCORE_COLS:
             df[col] = df.apply(
-                lambda row: clamp_cell(row.get(col), row.get(CATEGORY_COL), col),
+                lambda row: clamp_cell(
+                    row.get(col), row.get(CATEGORY_COL), col),
                 axis=1,
             )
 

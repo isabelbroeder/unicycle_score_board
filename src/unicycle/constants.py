@@ -2,20 +2,27 @@
 
 import datetime
 import json
-import os
 from enum import StrEnum
 from pathlib import Path
 
 
 DATE_COMPETITION = datetime.date(2026, 3, 7)
 
-CELL_WITH_CLUB = (7, "E")
+AGE_GROUPS = {
+    "individual male": ["U9", "U11", "U13", "U15", "15+"],
+    "individual female": ["U9", "U11", "U13", "U15", "15+"],
+    "pair": ["U9", "U11", "U13", "U15", "15+"],
+    "small_group": ["U15", "15+"],
+    "large_group": ["U12", "12+"],
+}
+
 
 class Categories(StrEnum):
-     INDIVIDUAL = "individual"
-     PAIR = "pair"
-     SMALL_GROUP = "small_group"
-     LARGE_GROUP = "large_group"
+    INDIVIDUAL = "individual"
+    PAIR = "pair"
+    SMALL_GROUP = "small_group"
+    LARGE_GROUP = "large_group"
+
 
 BASE_COLS_PARTICIPANT = ["routine_name", "names", "age_group", "category"]
 BASE_COLS_JURY = ["id_routine", "routine_name", "age_group", "category"]

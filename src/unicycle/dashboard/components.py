@@ -73,7 +73,8 @@ def build_layout():
             dcc.Store(id="jury-access", data=False),
             dbc.Modal(
                 [
-                    dbc.ModalHeader("🔒 Jury-Zugang", id="password-modal-header"),
+                    dbc.ModalHeader("🔒 Jury-Zugang",
+                                    id="password-modal-header"),
                     dbc.ModalBody(
                         [
                             html.Div(
@@ -186,7 +187,8 @@ def build_judge_legend_collapsible(theme: dict):
                 html.Div(
                     [
                         html.Span(label, style={"fontWeight": "bold"}),
-                        html.Div(text, style={"fontSize": "13px", "opacity": "0.8"}),
+                        html.Div(text, style={
+                                 "fontSize": "13px", "opacity": "0.8"}),
                     ],
                     style={"marginBottom": "8px"},
                 )

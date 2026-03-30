@@ -1,3 +1,5 @@
+"""Database handler for database riders"""
+
 from pathlib import Path
 
 from src.unicycle.constants import get_path_project_root
@@ -19,14 +21,28 @@ SQL_CREATE_TABLE = """
 
 
 class RidersDbHandler(DbHandler):
+    """
+    Singleton class for handling rider database operations.
+    Ensures only one instance manages database connection and operations.
+    Database contains rider data (id of the rider, name, gender, date of birth, the age at day of the competion and the club)
+    """
+
     _instance = None
 
     def __new__(cls, *args, **kwargs):
+        """
+        Creates a new instance if one does not exist otherwise returning existing one.
+        """
+
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self):
+        """
+        Initializes the database handler with the database path and table name.
+        Ensures initialization occurs only once.
+        """
         if not hasattr(self, "initialised"):
             self.initialised = True
             super().__init__(
@@ -35,4 +51,8 @@ class RidersDbHandler(DbHandler):
             )
 
     def create_table(self):
+        """
+        Creates empty database for rider data.
+        """
+
         self.execute(sql_query=SQL_CREATE_TABLE)

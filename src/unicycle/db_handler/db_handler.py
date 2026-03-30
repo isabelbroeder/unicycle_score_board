@@ -12,10 +12,18 @@ class DbHandler(ABC):
     """Handles reading and writing data from SQLite databases."""
 
     def __init__(self, db_path: Path, table_name: str):
+        """
+        Create database and connect to it.
+
+        db_path -- path to database
+        table_name --  name of table
+        """
+
         self.db_path = db_path
         self.table_name = table_name
         try:
-            self.db_connection = sqlite3.connect(self.db_path,check_same_thread=False,detect_types=sqlite3.PARSE_DECLTYPES)
+            self.db_connection = sqlite3.connect(self.db_path, check_same_thread=False,
+                                                 detect_types=sqlite3.PARSE_DECLTYPES)
             self.cursor = self.db_connection.cursor()
         except Exception as e:
             print(f"❌ Failed to connect database {self.table_name}: {e}")
@@ -24,11 +32,9 @@ class DbHandler(ABC):
         sqlite3.register_converter("DATE", convert_date)
         sqlite3.register_adapter(datetime.date, adapt_date_iso)
 
-
     @abstractmethod
     def create_table(self):
         pass
-
 
     def disconnect(self):
         """Disconnect DbHandler from database."""
@@ -42,16 +48,16 @@ class DbHandler(ABC):
         if self.is_connected:
             pass
         try:
-            self.db_connection = sqlite3.connect(self.db_path,check_same_thread=False,detect_types=sqlite3.PARSE_DECLTYPES)
+            self.db_connection = sqlite3.connect(self.db_path, check_same_thread=False,
+                                                 detect_types=sqlite3.PARSE_DECLTYPES)
             self.cursor = self.db_connection.cursor()
         except Exception as e:
             print(f"❌ Failed to connect database {self.table_name}: {e}")
             self.is_connected = False
         self.is_connected = True
 
-
     def get_data(
-        self, sql_query: str = None, par=None
+            self, sql_query: str = None, par=None
     ) -> pd.DataFrame:
         """
         Load data from a SQLite database into a pandas DataFrame.
@@ -85,6 +91,12 @@ class DbHandler(ABC):
             return pd.DataFrame()
 
     def execute(self, sql_query: str, params=None):
+        """
+        Execute sql query
+
+        sql_query: sql query which will be executed
+        params: optional, parameter for sql query
+        """
         try:
             if params is None:
                 self.cursor.execute(sql_query)
@@ -93,29 +105,38 @@ class DbHandler(ABC):
                     self.cursor.execute(sql_query, param)
             self.db_connection.commit()
         except Exception as e:
-            print(f"❌ Error executing sql query {sql_query} on {self.table_name}: {e}")
+            print(
+                f"❌ Error executing sql query {sql_query} on {self.table_name}: {e}")
 
     def update_data(self, df: pd.DataFrame, columns: list[str] = None):
         """Write dataframe contents to the configured SQLite table.
 
-        :param pd.DataFrame df: Data to write into the table.
-        :param list[str] columns: Optional list of allowed columns to persist.
+        pd.DataFrame df: Data to write into the table.
+        list[str] columns: Optional list of allowed columns to persist.
             If provided, only these columns are written.
-        :return None: Writes the dataframe to the database table.
         """
         try:
             if columns is not None:
                 df = df[[col for col in columns if col in df.columns]].copy()
 
-            df.to_sql(self.table_name, self.db_connection, if_exists="replace", index=False)
+            df.to_sql(self.table_name, self.db_connection,
+                      if_exists="replace", index=False)
             print(f"✅ {self.table_name} updated successfully.")
 
         except Exception as e:
             print(f"❌ Error writing to {self.table_name}: {e}")
 
     def update_multiple_rows(
-        self, df: pd.DataFrame, key_columns: list, update_columns: list
+            self, df: pd.DataFrame, key_columns: list, update_columns: list
     ):
+        """
+        Update data in database
+        Keyword arguments:
+            df -- Dataframe which will be inserted in database
+            key_columns -- Key columns in database
+            update_columns -- Columns in database which will be updated
+        """
+
         try:
             sql = f"""
             UPDATE {self.table_name}
@@ -133,9 +154,6 @@ class DbHandler(ABC):
         except Exception as e:
             print(
                 f"❌ Error updating {update_columns} in {self.table_name}: {e}")
-
-    def last_row_id(self):
-        return self.cursor.lastrowid
 
 
 def adapt_date_iso(val):
