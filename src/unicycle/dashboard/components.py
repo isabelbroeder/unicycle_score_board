@@ -5,7 +5,18 @@ import dash_daq as daq
 import pandas as pd
 from dash import dash_table, dcc, html
 
-from src.unicycle.constants import *
+from src.unicycle.constants import (
+    BASE_COLS_JURY,
+    BASE_COLS_PARTICIPANT,
+    CATEGORY_LABELS,
+    CATEGORY_ORDER,
+    COLUMN_LABELS,
+    D_COLS,
+    JUDGE_LEGEND,
+    P_COLS,
+    SCORE_COLS,
+    T_COLS,
+)
 
 
 def build_layout():

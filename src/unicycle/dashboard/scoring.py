@@ -3,7 +3,20 @@
 import numpy as np
 import pandas as pd
 
-from src.unicycle.constants import *
+from src.unicycle.constants import (
+    CATEGORY_COL,
+    CATEGORY_JUDGES,
+    D_COLS,
+    D_SUBS,
+    EMPTY_SCORE,
+    LOCKED_D_CATEGORIES,
+    LOCKED_D_JUDGE_COLS,
+    MAX_D_SCORE,
+    MAX_TP_SCORE,
+    MIN_SCORE,
+    ROUTINE_RESULT_WEIGHTS,
+    SCORE_COLS,
+)
 
 RESULT_COLS = ["T", "P", "D", "Ergebnis"]
 GROUP_CATEGORIES = {
@@ -97,7 +110,7 @@ def calculate_result(
             else:
                 divisor = np.nan
 
-        raw_d_score = 10 - (s_values * 0.5 + b_values / divisor)
+        raw_d_score = 10 - ((s_values * 0.5 + b_values) / divisor)
         raw_d_score = raw_d_score.where(has_d_input, np.nan)
 
         valid_raw = raw_d_score.dropna()

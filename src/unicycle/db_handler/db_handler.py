@@ -12,6 +12,13 @@ class DbHandler(ABC):
     """Handles reading and writing data from SQLite databases."""
 
     def __init__(self, db_path: Path, table_name: str):
+        """
+        Create database and connect to it.
+
+        db_path -- path to database
+        table_name --  name of table
+        """
+
         self.db_path = db_path
         self.table_name = table_name
         try:
@@ -28,17 +35,18 @@ class DbHandler(ABC):
         sqlite3.register_converter("DATE", convert_date)
         sqlite3.register_adapter(datetime.date, adapt_date_iso)
 
-    @abstractmethod
     def create_table(self):
         pass
 
     def disconnect(self):
+        """Disconnect DbHandler from database."""
         if not self.is_connected:
             pass
         self.db_connection.close()
         self.is_connected = False
 
     def connect(self):
+        """Connect DbHandler with database."""
         if self.is_connected:
             pass
         try:
@@ -85,6 +93,12 @@ class DbHandler(ABC):
             return pd.DataFrame()
 
     def execute(self, sql_query: str, params=None):
+        """
+        Execute sql query
+
+        sql_query: sql query which will be executed
+        params: optional, parameter for sql query
+        """
         try:
             if params is None:
                 self.cursor.execute(sql_query)
@@ -98,10 +112,9 @@ class DbHandler(ABC):
     def update_data(self, df: pd.DataFrame, columns: list[str] = None):
         """Write dataframe contents to the configured SQLite table.
 
-        :param pd.DataFrame df: Data to write into the table.
-        :param list[str] columns: Optional list of allowed columns to persist.
+        pd.DataFrame df: Data to write into the table.
+        list[str] columns: Optional list of allowed columns to persist.
             If provided, only these columns are written.
-        :return None: Writes the dataframe to the database table.
         """
         try:
             if columns is not None:
@@ -118,6 +131,14 @@ class DbHandler(ABC):
     def update_multiple_rows(
         self, df: pd.DataFrame, key_columns: list, update_columns: list
     ):
+        """
+        Update data in database
+        Keyword arguments:
+            df -- Dataframe which will be inserted in database
+            key_columns -- Key columns in database
+            update_columns -- Columns in database which will be updated
+        """
+
         try:
             sql = f"""
             UPDATE {self.table_name}
@@ -134,17 +155,12 @@ class DbHandler(ABC):
         except Exception as e:
             print(f"❌ Error updating {update_columns} in {self.table_name}: {e}")
 
-    def last_row_id(self):
-        return self.cursor.lastrowid
-
 
 def adapt_date_iso(val):
     """Adapt datetime.date to ISO 8601 date."""
-    print("adapt date return:", val.isoformat())
     return val.isoformat()
 
 
 def convert_date(val):
     """Convert ISO 8601 date to datetime.date object."""
-    print("convert date return: ", datetime.date.fromisoformat(val.decode()))
     return datetime.date.fromisoformat(val.decode())

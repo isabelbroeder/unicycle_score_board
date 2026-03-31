@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 from dash import Input, Output, State
 
-from components import build_dashboard_table
-from src.unicycle.constants import *
-from scoring import clamp_cell, recalculate_all_results
+from src.unicycle.dashboard.components import build_dashboard_table
+from src.unicycle.constants import CATEGORY_COL, DARK_THEME, LIGHT_THEME, SCORE_COLS
+from src.unicycle.dashboard.scoring import clamp_cell, recalculate_all_results
 
 
 def register_callbacks(app, data_service, stored_hash: bytes):

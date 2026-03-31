@@ -27,34 +27,37 @@ The participant overview allows users to view relevant information about competi
 
 We strongly suggest to use a python interpreter (preferably PyCharm, because the code was developed using it) to prevent any errors.
 
-0. Run `src/unicycle/create_database.py` to create the databases `riders.db`, `routines.db`, and `riders_routines.db`, which include necessary data for `app.py`.
+1. Save all registration files in the directory `data/registation_files`.
 
 
-1. Run `src/unicycle/app.py`.
+2. Run `src/unicycle/create_database.py` to create the databases `riders.db`, `routines.db`, and `riders_routines.db`, which include necessary data for `app.py`. Additionally, a starting order will be created and saved in `output/starting_order.xlsx`
 
 
-2. A link will appear in the console. Click on the link to access the dashboard.
+3. Run `src/unicycle/app.py`.
+
+
+4. A link will appear in the console. Click on the link to access the dashboard.
 
     <img src="images/console-link.png" width="1810" alt="">
 
 
-3. The dashboard opens with the participant overview as the default page. Below the table header is a filter included, where every column can be filtered individually. (The same filter can be used in the jury view.)
+5. The dashboard opens with the participant overview as the default page. Below the table header is a filter included, where every column can be filtered individually. (The same filter can be used in the jury view.)
 
 
-4. You can use the switch in the top left corner to toggle between dark and light mode.
+6. You can use the switch in the top left corner to toggle between dark and light mode.
 
     <img src="images/switch-dark.png" width="100" alt=""> <img src="images/switch-light.png" width="100" alt="">
 
 
-5. Click the "Jury Ansicht" button in the top right corner. Enter the password in the popup window. The password is `test`. (We know, very creative...)
+7. Click the "Jury Ansicht" button in the top right corner. Enter the password in the popup window. The password is `test`. (We know, very creative...)
 
     <img src="images/password.png" width="300" alt="">
 
 
-6. In the jury view, you can enter scores for each routine. Total scores are calculated automatically.
+8. In the jury view, you can enter scores for each routine. Total scores are calculated automatically.
 
 
-7. The complete scoreboard is automatically saved in the database `points.db`.
+9. The complete scoreboard is automatically saved in the database `points.db`.
 
 ## Unicycle Scoring System
 
