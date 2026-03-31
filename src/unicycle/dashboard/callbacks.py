@@ -12,7 +12,12 @@ from src.unicycle.dashboard.scoring import clamp_cell, recalculate_all_results
 
 
 def register_callbacks(app, data_service, stored_hash: bytes):
-    """Register all Dash callbacks for UI interactivity and persistence."""
+    """Register all dashboard callbacks on the Dash application.
+
+    dash.Dash app: Dash application instance that receives the callbacks.
+    Any data_service: Service used to load and persist dashboard data.
+    bytes stored_hash: Bcrypt password hash used to validate jury access.
+    """
 
     @app.callback(
         Output("password-modal", "is_open"),
@@ -37,6 +42,16 @@ def register_callbacks(app, data_service, stored_hash: bytes):
         password,
         has_access,
     ):
+        """Open, close, or validate the jury password modal.
+
+        Any open_clicks: Click count from the view switch button.
+        Any submit_clicks: Click count from the password submit button.
+        Any cancel_clicks: Click count from the password cancel button.
+        Any enter_submit: Submit count from pressing Enter in the password input.
+        bool is_open: Current modal visibility state.
+        str password: Password value entered by the user.
+        bool has_access: Whether jury mode access is currently granted.
+        """
         del open_clicks, submit_clicks, cancel_clicks, enter_submit, is_open
 
         ctx = dash.callback_context
@@ -68,6 +83,11 @@ def register_callbacks(app, data_service, stored_hash: bytes):
         prevent_initial_call=True,
     )
     def toggle_legend(n_clicks, current_style):
+        """Toggle the visibility of the jury legend section.
+
+        Any n_clicks: Click count from the legend toggle button.
+        dict current_style: Current style dictionary of the legend container.
+        """
         del n_clicks
 
         visible = current_style.get("display") == "block"
@@ -96,6 +116,11 @@ def register_callbacks(app, data_service, stored_hash: bytes):
         prevent_initial_call=False,
     )
     def update_dashboard(is_dark, jury_access):
+        """Refresh themed page content for participant or jury mode.
+
+        bool is_dark: Whether the dark theme toggle is enabled.
+        bool jury_access: Whether the current session may view jury mode.
+        """
         theme = DARK_THEME if is_dark else LIGHT_THEME
         password_input_style = {
             "width": "100%",
@@ -172,6 +197,11 @@ def register_callbacks(app, data_service, stored_hash: bytes):
         prevent_initial_call=True,
     )
     def update_points(timestamp, rows):
+        """Validate edited score cells, recompute results, and persist them.
+
+        Any timestamp: Timestamp emitted when the table data changes.
+        list[dict] rows: Current table rows from the editable dashboard table.
+        """
         if timestamp is None or not rows:
             raise dash.exceptions.PreventUpdate
 

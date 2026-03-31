@@ -4,7 +4,7 @@ import datetime
 import sqlite3
 import pandas as pd
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from pathlib import Path
 
 

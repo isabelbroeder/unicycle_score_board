@@ -25,10 +25,17 @@ class DataService:
     """Encapsulates all database access used by the dashboard."""
 
     def __init__(self, project_root: Path):
+        """Initialize the service with the project root directory.
+
+        Path project_root: Root directory that contains the dashboard data folder.
+        """
         self.project_root = Path(project_root)
 
     def db_path(self, name: str) -> Path:
-        """Return the path to a database file in the data directory."""
+        """Build the path to a database file inside the project data directory.
+
+        str name: Database filename relative to the project's data directory.
+        """
         return self.project_root / "data" / name
 
     def load_routines(self) -> pd.DataFrame:
@@ -117,7 +124,12 @@ class DataService:
         df: pd.DataFrame,
         columns: list[str] | None = None,
     ) -> None:
-        """Persist scoring data to the points database."""
+        """Persist scoring data to the configured points table.
+
+        pd.DataFrame df: Score dataframe to write into the points database.
+        list[str] columns: Optional list of allowed columns to persist.
+            If provided, only these columns are written.
+        """
         POINTS_DB_HANDLER.update_data(
             df,
             columns=columns or COLS_TO_SAVE,
@@ -125,7 +137,10 @@ class DataService:
 
     @staticmethod
     def _format_names(row: pd.Series) -> str:
-        """Format participant names for display in the participant view."""
+        """Format participant names for participant view display.
+
+        pd.Series row: Aggregated participant row containing category and names.
+        """
         if row["category"] in ["small_group", "large_group"] and isinstance(
             row["names"],
             str,

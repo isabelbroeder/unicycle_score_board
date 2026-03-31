@@ -26,7 +26,10 @@ GROUP_CATEGORIES = {
 
 
 def apply_locked_d_judges(df: pd.DataFrame) -> pd.DataFrame:
-    """Lock D3/D4 judges for non-group categories by setting values to EMPTY_SCORE."""
+    """Set locked D3 and D4 judge fields to the empty-score marker.
+
+    pd.DataFrame df: Score dataframe whose locked D columns should be normalized.
+    """
     df = df.copy()
 
     if CATEGORY_COL not in df.columns:
@@ -42,7 +45,10 @@ def apply_locked_d_judges(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def coerce_score_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Convert score columns to numeric values, treating EMPTY_SCORE as missing."""
+    """Convert score columns to numeric values where possible.
+
+    pd.DataFrame df: Score dataframe whose score columns should be coerced.
+    """
     df = df.copy()
 
     for col in SCORE_COLS:
@@ -61,7 +67,12 @@ def calculate_result(
     category: str,
     age_group: str,
 ) -> pd.DataFrame:
-    """Calculate normalized routine results for one category and age group."""
+    """Calculate normalized results for one category and age group.
+
+    pd.DataFrame df_points: Full scoring dataframe containing all routines.
+    str category: Routine category whose results should be calculated.
+    str age_group: Age group whose results should be calculated.
+    """
     category_judges = CATEGORY_JUDGES.get(category)
     if not category_judges:
         return pd.DataFrame(columns=RESULT_COLS)
@@ -198,7 +209,10 @@ def calculate_result(
 
 
 def recalculate_all_results(df: pd.DataFrame) -> pd.DataFrame:
-    """Recalculate results for all routines grouped by category and age group."""
+    """Recompute result columns for all category and age-group combinations.
+
+    pd.DataFrame df: Score dataframe whose result columns should be refreshed.
+    """
     df = df.copy()
 
     for col in RESULT_COLS:
@@ -231,13 +245,20 @@ def recalculate_all_results(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def is_locked_d_judge(category: str, colname: str) -> bool:
-    """Return True when the given D-judge column is locked for the category."""
+    """Check whether a D-judge column is locked for the given category.
+
+    str category: Routine category being validated.
+    str colname: Score column name whose lock status should be checked.
+    """
     judge_prefix = str(colname).split("_", 1)[0]
     return judge_prefix in LOCKED_D_JUDGE_COLS and category in LOCKED_D_CATEGORIES
 
 
 def parse_score_value(value):
-    """Convert a score input to float if possible."""
+    """Parse a raw score cell value into a normalized numeric form.
+
+    Any value: Raw score cell value entered in the dashboard table.
+    """
     if value == EMPTY_SCORE:
         return EMPTY_SCORE
 
@@ -248,14 +269,20 @@ def parse_score_value(value):
 
 
 def validate_d_score(value: float):
-    """Validate a D score."""
+    """Validate a difficulty score value.
+
+    float value: Parsed difficulty score to validate.
+    """
     if value > MAX_D_SCORE or not value.is_integer():
         return np.nan
     return int(value)
 
 
 def validate_tp_score(value: float):
-    """Validate a T/P score."""
+    """Validate a technical or performance score value.
+
+    float value: Parsed T or P score to validate.
+    """
     if value < MIN_SCORE:
         return np.nan
     if value > MAX_TP_SCORE:
@@ -264,7 +291,12 @@ def validate_tp_score(value: float):
 
 
 def clamp_cell(value, category: str, colname: str):
-    """Validate and normalize a score cell value."""
+    """Normalize and validate one score cell value for table persistence.
+
+    Any value: Raw score cell value entered in the dashboard table.
+    str category: Routine category used to determine locking rules.
+    str colname: Score column name used to determine validation rules.
+    """
     if is_locked_d_judge(category, colname):
         return EMPTY_SCORE
 

@@ -17,7 +17,6 @@ AGE_GROUPS = {
 }
 
 
-
 class Categories(StrEnum):
     INDIVIDUAL = "individual"
     PAIR = "pair"
@@ -52,8 +51,6 @@ MAX_D_SCORE = 999
 MAX_TP_SCORE = 10
 
 CATEGORY_COL = "category"
-POINTS_DB_NAME = "points.db"
-POINTS_TABLE_NAME = "points"
 
 COLUMN_LABELS = {
     "routine_name": "Kür-Name",

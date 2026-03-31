@@ -132,7 +132,11 @@ def build_layout():
 
 
 def build_judge_column(col: str, jury_mode: bool) -> dict:
-    """Generate a column definition for judge score columns."""
+    """Create a DataTable column definition for a judge score field.
+
+    str col: Judge score column name in the form '<judge>_<subscore>'.
+    bool jury_mode: Whether the dashboard is currently in jury mode.
+    """
     judge, sub = col.split("_", 1)
     return {
         "name": [judge, sub],
@@ -143,7 +147,10 @@ def build_judge_column(col: str, jury_mode: bool) -> dict:
 
 
 def build_judge_legend_collapsible(theme: dict):
-    """Build a collapsible legend explaining judge scoring categories."""
+    """Build the collapsible judge legend container for jury mode.
+
+    dict theme: Theme colors and styling values used to render the legend.
+    """
     button_style = {
         "backgroundColor": theme["headerBg"],
         "color": theme["textColor"],
@@ -170,6 +177,11 @@ def build_judge_legend_collapsible(theme: dict):
     }
 
     def build_column(judge: str, subs: dict):
+        """Build one legend column for a single judge family.
+
+        str judge: Judge prefix such as 'T', 'P', or 'D'.
+        dict subs: Mapping of subscore keys to explanatory legend text.
+        """
         header = html.Div(
             f"Judge {judge}",
             style={
@@ -226,7 +238,13 @@ def build_datatable(
     editable: bool = False,
     jury_mode: bool = False,
 ):
-    """Create a Dash DataTable configured for participant or jury mode."""
+    """Create the dashboard DataTable or an empty-state placeholder.
+
+    pd.DataFrame df: Source dataframe rendered into the table.
+    dict theme: Theme colors and styling values used for the table.
+    bool editable: Whether the rendered table cells should be editable.
+    bool jury_mode: Whether the table should use jury-specific headers and options.
+    """
     if df.empty:
         return html.Div(
             "❌ Keine Daten geladen.",
@@ -358,7 +376,12 @@ def build_datatable(
 
 
 def build_dashboard_table(df: pd.DataFrame, theme: dict, jury_mode: bool):
-    """Build the table area for the selected view."""
+    """Build the full dashboard table area for the active view mode.
+
+    pd.DataFrame df: Source dataframe rendered in the dashboard table.
+    dict theme: Theme colors and styling values used for rendering.
+    bool jury_mode: Whether to render the jury view instead of participant view.
+    """
     if jury_mode:
         legend = build_judge_legend_collapsible(theme)
         return html.Div(
