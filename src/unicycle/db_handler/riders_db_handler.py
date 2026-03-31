@@ -24,7 +24,7 @@ class RidersDbHandler(DbHandler):
     """
     Singleton class for handling rider database operations.
     Ensures only one instance manages database connection and operations.
-    Database contains rider data (id of the rider, name, gender, date of birth, the age at day of the competion and the club)
+    Database contains rider data (id of the rider, name, gender, date of birth, the age at day of the competition and the club)
     """
 
     _instance = None
