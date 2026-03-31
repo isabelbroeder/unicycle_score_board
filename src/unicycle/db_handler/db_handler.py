@@ -158,11 +158,9 @@ class DbHandler(ABC):
 
 def adapt_date_iso(val):
     """Adapt datetime.date to ISO 8601 date."""
-    print("adapt date return:", val.isoformat())
     return val.isoformat()
 
 
 def convert_date(val):
     """Convert ISO 8601 date to datetime.date object."""
-    print("convert date return: ", datetime.date.fromisoformat(val.decode()))
     return datetime.date.fromisoformat(val.decode())
