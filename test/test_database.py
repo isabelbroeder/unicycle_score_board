@@ -20,6 +20,3 @@ def test_database():
     assert (
         (df["name"] == "Max Mustermann") & (df["routine_name"] == "Max und Moritz")
     ).any()
-
-
-

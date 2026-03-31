@@ -18,6 +18,7 @@ class PointsDbHandler(DbHandler):
     Ensures only one instance manages database connection and operations.
     Database contains points of the routine given by the judges.
     """
+
     _instance = None
 
     def __new__(cls, *args, **kwargs):

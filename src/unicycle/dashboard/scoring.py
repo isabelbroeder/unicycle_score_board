@@ -67,8 +67,7 @@ def calculate_result(
         return pd.DataFrame(columns=RESULT_COLS)
 
     group_df = df_points[
-        (df_points[CATEGORY_COL] == category)
-        & (df_points["age_group"] == age_group)
+        (df_points[CATEGORY_COL] == category) & (df_points["age_group"] == age_group)
     ].copy()
 
     if group_df.empty:
@@ -111,7 +110,7 @@ def calculate_result(
             else:
                 divisor = np.nan
 
-        raw_d_score = 10 - (s_values * 0.5 + b_values / divisor)
+        raw_d_score = 10 - ((s_values * 0.5 + b_values) / divisor)
         raw_d_score = raw_d_score.where(has_d_input, np.nan)
 
         valid_raw = raw_d_score.dropna()
@@ -234,10 +233,7 @@ def recalculate_all_results(df: pd.DataFrame) -> pd.DataFrame:
 def is_locked_d_judge(category: str, colname: str) -> bool:
     """Return True when the given D-judge column is locked for the category."""
     judge_prefix = str(colname).split("_", 1)[0]
-    return (
-        judge_prefix in LOCKED_D_JUDGE_COLS
-        and category in LOCKED_D_CATEGORIES
-    )
+    return judge_prefix in LOCKED_D_JUDGE_COLS and category in LOCKED_D_CATEGORIES
 
 
 def parse_score_value(value):

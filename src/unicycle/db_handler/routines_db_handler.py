@@ -23,6 +23,7 @@ class RoutinesDbHandler(DbHandler):
     Ensures only one instance manages database connection and operations.
     Database contains id of routine, name of the routine, category and age group.
     """
+
     _instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -40,9 +41,7 @@ class RoutinesDbHandler(DbHandler):
         """
         if not hasattr(self, "initialised"):
             self.initialised = True
-            super().__init__(
-                Path(PROJECT_ROOT, DIRECTORY_DB, FILE_NAME_DB), TABLE_NAME
-            )
+            super().__init__(Path(PROJECT_ROOT, DIRECTORY_DB, FILE_NAME_DB), TABLE_NAME)
 
     def create_table(self):
         """
