@@ -381,11 +381,11 @@ def format_names(names):
     """
     if isinstance(names, set):
         if len(names) == 2:
-            return f"{s.pop()} und {s.pop()}"
+            return f"{names.pop()} und {names.pop()}"
         if len(names) > 2:
             return f"{len(names)} Fahrer/innen"
     else:
-        return s
+        return names
 
 
 def main():
