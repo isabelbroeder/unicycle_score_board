@@ -28,36 +28,39 @@ Die Teilnehmerübersicht ermöglicht die Anzeige relevanter Informationen über 
 
 Wir empfehlen dringend, einen Python-Interpreter zu verwenden (vorzugsweise PyCharm, da der Code damit entwickelt wurde), um Fehler zu vermeiden.
 
-0. Führen Sie `src/unicycle/create_database.py` aus, um die Datenbanken `riders.db`, `routines.db` und `riders_routines.db` zu erstellen, welche notwendige Daten für `app.py` enthalten.
+1. Speichern Sie alle Anmelde-Dateien im Ordner `data/registration_files` 
 
 
-1. Führen Sie `src/unicycle/app.py` aus.
+2. Führen Sie `src/unicycle/create_database.py` aus, um die Datenbanken `riders.db`, `routines.db` und `riders_routines.db` zu erstellen, welche notwendige Daten für `app.py` enthalten. Außerdem wird eine Startliste erstellt und unter `output/starting_order.xlsx` gespeichert.
 
 
-2. Nach dem Ausführen erscheint in der Konsole ein Link. Klicken Sie auf diesen Link, um das Dashboard zu öffnen.
-
-    <img src="images/console-link.png" width="1810" alt="">
+3. Führen Sie `src/unicycle/app.py` aus. 
 
 
-3. Das Dashboard öffnet sich standardmäßig mit der Teilnehmerübersicht. Unterhalb der Tabellenüberschrift ist ein Filter integriert, mit dem jede Spalte einzeln gefiltert werden kann. (Der gleiche Filter kann auch in der Juryansicht verwendet werden.)
+4. Nach dem Ausführen erscheint in der Konsole ein Link. Klicken Sie auf diesen Link, um das Dashboard zu öffnen.
+
+    <img src="images/console-link.png" width="1810" alt="">  
+   
+
+5. Das Dashboard öffnet sich standardmäßig mit der Teilnehmerübersicht. Unterhalb der Tabellenüberschrift ist ein Filter integriert, mit dem jede Spalte einzeln gefiltert werden kann. (Der gleiche Filter kann auch in der Juryansicht verwendet werden.)
 
 
-4. Verwenden Sie den Schalter oben links, um zwischen Dark Mode und Light Mode zu wechseln.
+6. Verwenden Sie den Schalter oben links, um zwischen Dark Mode und Light Mode zu wechseln.
 
     <img src="images/switch-dark.png" width="100" alt=""> <img src="images/switch-light.png" width="100" alt="">
 
 
-5. Klicken Sie oben rechts auf die Schaltfläche „Jury Ansicht“. Geben Sie das Passwort im Popup-Fenster ein. Das Passwort lautet `test`. (Sehr kreativ, wissen wir...)
+7. Klicken Sie oben rechts auf die Schaltfläche „Jury Ansicht“. Geben Sie das Passwort im Pop-up-Fenster ein. Das Passwort lautet `test`. (Sehr kreativ, wissen wir ...)
 
     <img src="images/password.png" width="300" alt="">
 
 
-6. In der Juryansicht können Sie Punkte für jede Kür eingeben. Die Gesamtpunktzahl wird automatisch berechnet.
+8. In der Juryansicht können Sie Punkte für jede Kür eingeben. Die Gesamtpunktzahl wird automatisch berechnet.
 
 
-7. Die vollständige Punktetabelle wird automatisch in der Datenbank `points.db` gespeichert.
+9. Die vollständige Punktetabelle wird automatisch in der Datenbank `points.db` gespeichert.
 
-## Einrad-Bewertungsystem
+## Einrad-Bewertungssystem
 
 1. Kategorien
 
@@ -81,7 +84,7 @@ Wir empfehlen dringend, einen Python-Interpreter zu verwenden (vorzugsweise PyCh
 - Technik- und Performance-Wertungsrichter:innen können in drei Kategorien jeweils 0 bis 10 Punkte vergeben (mit beliebig vielen Dezimalstellen, üblicherweise ein oder zwei)
   - Technik-Kategorien: Anzahl der Einrad-Elemente und Übergänge, Beherrschung und Qualität der Ausführung, Schwierigkeit und Dauer
   - Performance-Kategorien: Präsenz/Ausführung, Komposition/Choreografie, Interpretation der Musik/Timing
-- Bei Abstiegen wird zwischen kleinen und großen Abstiegen unterschieden
+- Bei Abstiegen wird zwischen leichten und schweren Abstiegen unterschieden
 
 ## Weiterführende Ideen
 
