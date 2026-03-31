@@ -1,8 +1,7 @@
 from pathlib import Path
-import os
 
 from src.unicycle.constants import UNICYCLE_SCORE_BOARD_PATH
-from src.unicycle.db_handler import DbHandler
+from src.unicycle.db_handler.db_handler import DbHandler
 
 
 PATH_DATABASE = Path("data")

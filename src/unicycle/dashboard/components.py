@@ -5,18 +5,7 @@ import dash_daq as daq
 import pandas as pd
 from dash import dash_table, dcc, html
 
-from constants import (
-    BASE_COLS_JURY,
-    BASE_COLS_PARTICIPANT,
-    CATEGORY_LABELS,
-    CATEGORY_ORDER,
-    COLUMN_LABELS,
-    D_COLS,
-    JUDGE_LEGEND,
-    P_COLS,
-    SCORE_COLS,
-    T_COLS,
-)
+from src.unicycle.constants import *
 
 
 def build_layout():
@@ -243,8 +232,8 @@ def build_datatable(
 
     if "category" in df.columns:
         df = df.copy()
-        df["category_label"] = df["category"].map(CATEGORY_LABELS).fillna(
-            df["category"]
+        df["category_label"] = (
+            df["category"].map(CATEGORY_LABELS).fillna(df["category"])
         )
         df["category_label"] = pd.Categorical(
             df["category_label"],

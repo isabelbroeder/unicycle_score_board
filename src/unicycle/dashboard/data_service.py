@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from constants import COLS_TO_SAVE, SCORE_COLS
+from src.unicycle.constants import *
 from scoring import apply_locked_d_judges, recalculate_all_results
 from src.unicycle.db_handler.points_db_handler import PointsDbHandler
 from src.unicycle.db_handler.riders_db_handler import RidersDbHandler
@@ -16,6 +16,7 @@ POINTS_DB_HANDLER = PointsDbHandler()
 RIDERS_DB_HANDLER = RidersDbHandler()
 ROUTINES_DB_HANDLER = RoutinesDbHandler()
 RIDERSROUTINES_DB_HANDLER = RidersRoutinesDbHandler()
+
 
 class DataService:
     """Encapsulates all database access used by the dashboard."""
@@ -35,8 +36,7 @@ class DataService:
         """Load only the routine columns needed for participant view."""
         return ROUTINES_DB_HANDLER.get_data(
             sql_query=(
-                "SELECT id_routine, routine_name, category, age_group "
-                "FROM routines"
+                "SELECT id_routine, routine_name, category, age_group " "FROM routines"
             )
         )
 
@@ -127,8 +127,6 @@ class DataService:
             row["names"],
             str,
         ):
-            count = len(
-                [name for name in row["names"].split(",") if name.strip()]
-            )
+            count = len([name for name in row["names"].split(",") if name.strip()])
             return f"{count} Personen"
         return row["names"]

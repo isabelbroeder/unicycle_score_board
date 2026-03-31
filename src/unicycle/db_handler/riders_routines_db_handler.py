@@ -1,9 +1,7 @@
-from datetime import datetime
 from pathlib import Path
 import os
-import sqlite3
 
-from src.unicycle.db_handler import DbHandler
+from src.unicycle.db_handler.db_handler import DbHandler
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 unicycle_score_board_path = Path(script_dir).parent.parent

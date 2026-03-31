@@ -10,11 +10,13 @@ DATE_COMPETITION = datetime.date(2026, 3, 7)
 
 CELL_WITH_CLUB = (7, "E")
 
+
 class Categories(StrEnum):
-     INDIVIDUAL = "individual"
-     PAIR = "pair"
-     SMALL_GROUP = "small_group"
-     LARGE_GROUP = "large_group"
+    INDIVIDUAL = "individual"
+    PAIR = "pair"
+    SMALL_GROUP = "small_group"
+    LARGE_GROUP = "large_group"
+
 
 BASE_COLS_PARTICIPANT = ["routine_name", "names", "age_group", "category"]
 BASE_COLS_JURY = ["id_routine", "routine_name", "age_group", "category"]

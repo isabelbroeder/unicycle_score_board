@@ -15,6 +15,7 @@ from src.unicycle.db_handler.riders_routines_db_handler import RidersRoutinesDbH
 SHEET_NAME_REGISTRATION_DATA = "Teilnehmer"
 SHEET_NAME_REGISTRATION_OVERVIEW = "Allg. Daten"
 
+
 def read_registration_file(path: Path) -> pd.DataFrame:
     """
     Read the registration file
@@ -42,7 +43,9 @@ def read_registration_file(path: Path) -> pd.DataFrame:
         "entry_fee",
     ]
 
-    registration = pd.read_excel(path, sheet_name=SHEET_NAME_REGISTRATION_DATA, skiprows=4)
+    registration = pd.read_excel(
+        path, sheet_name=SHEET_NAME_REGISTRATION_DATA, skiprows=4
+    )
     registration.columns = COL_NAMES_REGISTRATION_FILE
 
     registration = registration[registration[COL_NAMES_REGISTRATION_FILE[0]].notna()]
@@ -50,7 +53,9 @@ def read_registration_file(path: Path) -> pd.DataFrame:
     registration = registration.convert_dtypes()
     registration["date_of_birth"] = registration["date_of_birth"].dt.date
 
-    registration_overview = pd.read_excel(path, sheet_name=SHEET_NAME_REGISTRATION_OVERVIEW, header=None)
+    registration_overview = pd.read_excel(
+        path, sheet_name=SHEET_NAME_REGISTRATION_OVERVIEW, header=None
+    )
     club = registration_overview.loc[
         CELL_WITH_CLUB[0] - 1, list(string.ascii_uppercase).index(CELL_WITH_CLUB[1])
     ]
@@ -63,26 +68,31 @@ def read_registration_file(path: Path) -> pd.DataFrame:
     return registration_stripped
 
 
-def fill_database_riders(registration: pd.DataFrame, rider_db_handler=RidersDbHandler()):
+def fill_database_riders(
+    registration: pd.DataFrame, rider_db_handler=RidersDbHandler()
+):
     """
     create the database riders.db
     Keyword arguments:
         registration: dataframe with registration data
     """
 
-    df_riders = registration[["name", "gender",
-                              "date_of_birth", "age", "club"]]
-    df_riders.assign(age=df_riders["date_of_birth"].apply(
-        lambda date_of_birth: calculate_age(date_of_birth, DATE_COMPETITION)))
+    df_riders = registration[["name", "gender", "date_of_birth", "age", "club"]]
+    df_riders.assign(
+        age=df_riders["date_of_birth"].apply(
+            lambda date_of_birth: calculate_age(date_of_birth, DATE_COMPETITION)
+        )
+    )
     sql_insert = """INSERT INTO riders (name, gender, date_of_birth, age_competition_day, club) VALUES (? , ? , ? , ? , ?) """
-    rider_db_handler.execute(
-        sql_insert, df_riders.itertuples(index=False, name=None))
+    rider_db_handler.execute(sql_insert, df_riders.itertuples(index=False, name=None))
 
 
-def fill_database_routines(registration: pd.DataFrame,
-                           riders_db_handler= RidersDbHandler() ,
-                           routines_db_handler = RoutinesDbHandler(),
-                           riders_routines_db_handler = RidersRoutinesDbHandler() ):
+def fill_database_routines(
+    registration: pd.DataFrame,
+    riders_db_handler=RidersDbHandler(),
+    routines_db_handler=RoutinesDbHandler(),
+    riders_routines_db_handler=RidersRoutinesDbHandler(),
+):
     """
     create the databases routines.db and riders_routines.db
     Keyword arguments:
@@ -136,7 +146,6 @@ def fill_database_routines(registration: pd.DataFrame,
                     + name_riders["date_of_birth"].tolist(),
                 )
 
-
                 sql_insert = """INSERT INTO riders_routines (id_rider, id_routine) VALUES (?, ? ) """
 
                 data = list(
@@ -150,33 +159,39 @@ def fill_database_routines(registration: pd.DataFrame,
                 )
                 riders_routines_db_handler.execute(sql_insert, data)
 
-def fill_database_points(routines_db_handler: RoutinesDbHandler = RoutinesDbHandler(), points_db_handler: PointsDbHandler = PointsDbHandler()):
-    #tp_columns = " REAL,\n".join(TP_SUBCOLS) + " REAL"
-    #d_columns = " INTEGER,\n".join(D_COLS) + " INTEGER"
 
-    #routines_db_handler = RoutinesDbHandler()
-    #if not routines_db_handler.is_connected:
+def fill_database_points(
+    routines_db_handler: RoutinesDbHandler = RoutinesDbHandler(),
+    points_db_handler: PointsDbHandler = PointsDbHandler(),
+):
+    # tp_columns = " REAL,\n".join(TP_SUBCOLS) + " REAL"
+    # d_columns = " INTEGER,\n".join(D_COLS) + " INTEGER"
+
+    # routines_db_handler = RoutinesDbHandler()
+    # if not routines_db_handler.is_connected:
     #    routines_db_handler.connect()
 
     id_routine = routines_db_handler.get_data("""SELECT id_routine FROM routines""")
-    id_routine_str = [f"({val})" for val in id_routine['id_routine'].values]
+    id_routine_str = [f"({val})" for val in id_routine["id_routine"].values]
     id_routine_str = ", ".join(id_routine_str)
     SQL_INSERT_KEYS = f"INSERT INTO points (id_routine) VALUES {id_routine_str};"
 
     points_db_handler.execute(SQL_INSERT_KEYS)
 
 
-def split_individual_male_female(riders_db_handler: RidersDbHandler = RidersDbHandler(),
-                                 routines_db_handler: RoutinesDbHandler = RoutinesDbHandler(),
-                                 riders_routines_db_handler: RidersRoutinesDbHandler = RidersRoutinesDbHandler()):
+def split_individual_male_female(
+    riders_db_handler: RidersDbHandler = RidersDbHandler(),
+    routines_db_handler: RoutinesDbHandler = RoutinesDbHandler(),
+    riders_routines_db_handler: RidersRoutinesDbHandler = RidersRoutinesDbHandler(),
+):
     """
     split the category individual into individual female and individual male
     """
 
-    df_riders = riders_db_handler.get_data(
-        """SELECT id_rider, gender FROM riders""")
+    df_riders = riders_db_handler.get_data("""SELECT id_rider, gender FROM riders""")
     df_routines = routines_db_handler.get_data(
-        """SELECT id_routine, category FROM routines WHERE category == 'individual'""")
+        """SELECT id_routine, category FROM routines WHERE category == 'individual'"""
+    )
     df_riders_routines = riders_routines_db_handler.get_data()
 
     df_individual = df_riders_routines.merge(
@@ -196,9 +211,12 @@ def split_individual_male_female(riders_db_handler: RidersDbHandler = RidersDbHa
     )
 
 
-def check_age_groups(age_groups: dict, riders_db_handler= RidersDbHandler() ,
-                     routines_db_handler =  RoutinesDbHandler() ,
-                     riders_routines_db_handler = RidersRoutinesDbHandler() ):
+def check_age_groups(
+    age_groups: dict,
+    riders_db_handler=RidersDbHandler(),
+    routines_db_handler=RoutinesDbHandler(),
+    riders_routines_db_handler=RidersRoutinesDbHandler(),
+):
     """
     Checks whether the age groups in the registration file are correct.
     If not the age group will be corrected
@@ -209,7 +227,8 @@ def check_age_groups(age_groups: dict, riders_db_handler= RidersDbHandler() ,
         """SELECT id_routine, category, age_group FROM routines"""
     )
     df_riders = riders_db_handler.get_data(
-        """SELECT id_rider, age_competition_day FROM riders""")
+        """SELECT id_rider, age_competition_day FROM riders"""
+    )
     df_riders_routines = riders_routines_db_handler.get_data()
 
     df = df_riders_routines.merge(df_riders, on="id_rider", how="left").merge(
@@ -226,8 +245,7 @@ def check_age_groups(age_groups: dict, riders_db_handler= RidersDbHandler() ,
         )
         if age_group_routine != df_max["age_group"].iloc[row]:
             new_row = pd.DataFrame(
-                {"id_routine": df_max.index[row],
-                    "age_group": age_group_routine},
+                {"id_routine": df_max.index[row], "age_group": age_group_routine},
                 index=[0],
             )
             df_update_age_groups = pd.concat(
@@ -263,11 +281,18 @@ def set_age_group(age: int, age_groups: list) -> str:
     return age_group_routine
 
 
-def create_starting_order(age_groups, riders_db_handler=  RidersDbHandler(), routines_db_handler= RoutinesDbHandler(), riders_routines_db_handler =RidersRoutinesDbHandler()):
+def create_starting_order(
+    age_groups,
+    riders_db_handler=RidersDbHandler(),
+    routines_db_handler=RoutinesDbHandler(),
+    riders_routines_db_handler=RidersRoutinesDbHandler(),
+):
     df_riders = riders_db_handler.get_data(
-        """SELECT id_rider, name, club FROM riders""")
+        """SELECT id_rider, name, club FROM riders"""
+    )
     df_routines = routines_db_handler.get_data(
-        """SELECT id_routine, routine_name, category, age_group FROM routines""")
+        """SELECT id_routine, routine_name, category, age_group FROM routines"""
+    )
     df_riders_routines = riders_routines_db_handler.get_data()
     df = df_riders_routines.merge(df_riders, on="id_rider", how="left").merge(
         df_routines, on="id_routine", how="left"
@@ -296,8 +321,7 @@ def create_starting_order(age_groups, riders_db_handler=  RidersDbHandler(), rou
         max_row = 1
         for category, list_age_group in age_groups.items():
             for age_group in list_age_group:
-                df1 = df[(df["category"] == category) &
-                         (df["age_group"] == age_group)]
+                df1 = df[(df["category"] == category) & (df["age_group"] == age_group)]
                 worksheet.merge_cells(f"A{max_row}:C{max_row}")
                 worksheet[f"A{max_row}"] = f"{category} {age_group}"
                 df1[["routine_name", "name", "club"]].to_excel(
@@ -354,7 +378,6 @@ def main():
     routines_db_handler.create_table()
     riders_routines_db_handler.create_table()
     points_db_handler.create_table()
-
 
     for file in registration_files:
         registration = read_registration_file(

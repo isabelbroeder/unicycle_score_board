@@ -3,20 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from constants import (
-    CATEGORY_COL,
-    CATEGORY_JUDGES,
-    D_COLS,
-    D_SUBS,
-    EMPTY_SCORE,
-    LOCKED_D_CATEGORIES,
-    LOCKED_D_JUDGE_COLS,
-    MAX_D_SCORE,
-    MAX_TP_SCORE,
-    MIN_SCORE,
-    ROUTINE_RESULT_WEIGHTS,
-    SCORE_COLS,
-)
+from src.unicycle.constants import *
 
 RESULT_COLS = ["T", "P", "D", "Ergebnis"]
 GROUP_CATEGORIES = {
@@ -67,8 +54,7 @@ def calculate_result(
         return pd.DataFrame(columns=RESULT_COLS)
 
     group_df = df_points[
-        (df_points[CATEGORY_COL] == category)
-        & (df_points["age_group"] == age_group)
+        (df_points[CATEGORY_COL] == category) & (df_points["age_group"] == age_group)
     ].copy()
 
     if group_df.empty:
@@ -234,10 +220,7 @@ def recalculate_all_results(df: pd.DataFrame) -> pd.DataFrame:
 def is_locked_d_judge(category: str, colname: str) -> bool:
     """Return True when the given D-judge column is locked for the category."""
     judge_prefix = str(colname).split("_", 1)[0]
-    return (
-        judge_prefix in LOCKED_D_JUDGE_COLS
-        and category in LOCKED_D_CATEGORIES
-    )
+    return judge_prefix in LOCKED_D_JUDGE_COLS and category in LOCKED_D_CATEGORIES
 
 
 def parse_score_value(value):

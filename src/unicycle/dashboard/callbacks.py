@@ -7,7 +7,7 @@ import pandas as pd
 from dash import Input, Output, State
 
 from components import build_dashboard_table
-from constants import CATEGORY_COL, DARK_THEME, LIGHT_THEME, SCORE_COLS
+from src.unicycle.constants import *
 from scoring import clamp_cell, recalculate_all_results
 
 

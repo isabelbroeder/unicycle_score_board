@@ -1,10 +1,11 @@
 from src.unicycle.constants import *
-from src.unicycle.db_handler import DbHandler
+from src.unicycle.db_handler.db_handler import DbHandler
 
 
 PATH_DATABASE = Path("data")
 FILE_NAME_DB = Path("points.db")
 TABLE_NAME = "points"
+
 
 class PointsDbHandler(DbHandler):
     _instance = None
